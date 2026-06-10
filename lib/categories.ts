@@ -8,6 +8,7 @@ export const CATEGORIES: {
   pill: string;
   boxActive: string;
   boxIdle: string;
+  chipActive: string;
 }[] = [
   {
     id: "personal",
@@ -17,6 +18,7 @@ export const CATEGORIES: {
     pill: "bg-accent-soft/50 text-foreground",
     boxActive: "border-accent bg-accent-soft/35 ring-2 ring-accent/15",
     boxIdle: "border-accent-soft/70 bg-paper hover:border-accent/50",
+    chipActive: "bg-accent-soft/60 text-foreground ring-1 ring-accent/25",
   },
   {
     id: "work",
@@ -26,6 +28,7 @@ export const CATEGORIES: {
     pill: "bg-mint/60 text-foreground",
     boxActive: "border-forest bg-mint/40 ring-2 ring-forest/20",
     boxIdle: "border-mint bg-paper hover:border-forest/50",
+    chipActive: "bg-mint/55 text-foreground ring-1 ring-forest/20",
   },
 ];
 
