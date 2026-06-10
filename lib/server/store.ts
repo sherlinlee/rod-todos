@@ -3,7 +3,16 @@ import type { RodSyncData } from "@/lib/sync-types";
 
 const BLOB_PATHNAME = "rod-sync.json";
 
+function blobConfigured() {
+  return Boolean(
+    process.env.BLOB_READ_WRITE_TOKEN ||
+      (process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN),
+  );
+}
+
 export async function loadSyncData(): Promise<RodSyncData | null> {
+  if (!blobConfigured()) return null;
+
   try {
     const result = await get(BLOB_PATHNAME, { access: "private" });
     if (!result || result.statusCode !== 200 || !result.stream) return null;
@@ -16,6 +25,8 @@ export async function loadSyncData(): Promise<RodSyncData | null> {
 }
 
 export async function saveSyncData(data: RodSyncData): Promise<boolean> {
+  if (!blobConfigured()) return false;
+
   try {
     await put(BLOB_PATHNAME, JSON.stringify(data), {
       access: "private",
@@ -27,4 +38,8 @@ export async function saveSyncData(data: RodSyncData): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export function isSyncStorageConfigured() {
+  return blobConfigured();
 }

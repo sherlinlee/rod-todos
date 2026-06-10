@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isRequestAuthenticated } from "@/lib/server/request-auth";
-import { loadSyncData, saveSyncData } from "@/lib/server/store";
+import { loadSyncData, saveSyncData, isSyncStorageConfigured } from "@/lib/server/store";
 import { mergeSyncData } from "@/lib/sync-merge";
 import type { RodSyncData } from "@/lib/sync-types";
 import type { Idea } from "@/lib/ideas";
@@ -87,6 +87,13 @@ export async function PUT(request: NextRequest) {
   const existing = await loadSyncData();
   const merged = existing ? mergeSyncData(parsed, existing) : parsed;
   const payload = { ...merged, updatedAt: Date.now() };
+
+  if (!isSyncStorageConfigured()) {
+    return NextResponse.json(
+      { ok: false, error: "storage_not_configured" },
+      { status: 503 },
+    );
+  }
 
   const saved = await saveSyncData(payload);
   if (!saved) {
