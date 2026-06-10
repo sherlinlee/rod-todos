@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import RodCelebrationAvatar from "@/components/RodCelebrationAvatar";
+import { debugLog } from "@/lib/debug-log";
 
 type CelebrationToastProps = {
   message: string;
@@ -13,8 +14,22 @@ export default function CelebrationToast({
   message,
   onDone,
 }: CelebrationToastProps) {
+  const shownAt = useRef(Date.now());
+
   useEffect(() => {
-    const timer = window.setTimeout(onDone, 2800);
+    // #region agent log
+    debugLog("H4", "CelebrationToast.tsx:mount", "celebration toast shown", {
+      durationMs: 1600,
+    }, "post-fix");
+    // #endregion
+    const timer = window.setTimeout(() => {
+      // #region agent log
+      debugLog("H4", "CelebrationToast.tsx:onDone", "celebration toast dismissed", {
+        visibleMs: Date.now() - shownAt.current,
+      }, "post-fix");
+      // #endregion
+      onDone();
+    }, 1600);
     return () => window.clearTimeout(timer);
   }, [onDone]);
 

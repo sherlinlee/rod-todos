@@ -7,6 +7,7 @@ import {
   mergeSyncData,
   needsCloudPush,
 } from "@/lib/sync-merge";
+import { debugLog } from "@/lib/debug-log";
 import {
   type RodSyncData,
   SYNC_META_KEY,
@@ -177,15 +178,30 @@ async function pushCloudSyncMerged(local: RodSyncData): Promise<boolean> {
     }
 
     const merged = mergeSyncData(localWithRevision, cloud);
-    applyCloudData(merged);
+    // #region agent log
+    debugLog("H2", "sync-client.ts:pushCloudSyncMerged", "merge before push", {
+      localCompleted: localWithRevision.todos.filter((t) => t.completed).length,
+      cloudCompleted: cloud.todos.filter((t) => t.completed).length,
+      mergedCompleted: merged.todos.filter((t) => t.completed).length,
+      localUpdatedAt: localWithRevision.updatedAt,
+      cloudUpdatedAt: cloud.updatedAt,
+      willPush: needsCloudPush(merged, cloud),
+    }, "post-fix");
+    // #endregion
 
     if (!needsCloudPush(merged, cloud)) {
       return true;
     }
 
     const payload = { ...merged, updatedAt: Date.now() };
-    applyCloudData(payload);
-    return pushCloudSync(payload);
+    const pushed = await pushCloudSync(payload);
+    // #region agent log
+    debugLog("H2", "sync-client.ts:pushCloudSyncMerged", "push finished", {
+      pushed,
+      payloadCompleted: payload.todos.filter((t) => t.completed).length,
+    }, "post-fix");
+    // #endregion
+    return pushed;
   });
 
   return pushChain;
@@ -229,15 +245,17 @@ export async function hydrateFromCloud(): Promise<RodSyncData> {
 }
 
 export async function refreshFromCloud(): Promise<RodSyncData | null> {
-  const local = buildLocalSnapshot();
   const cloud = await fetchCloudSync();
   if (!cloud) return null;
 
-  const merged = mergeSyncData(local, cloud);
-  applyCloudData(merged);
-  await pushCloudSyncMerged(buildLocalSnapshot());
+  // #region agent log
+  debugLog("H5", "sync-client.ts:refreshFromCloud", "poll fetched cloud only", {
+    cloudCompleted: cloud.todos.filter((t) => t.completed).length,
+    cloudUpdatedAt: cloud.updatedAt,
+  }, "post-fix");
+  // #endregion
 
-  return merged;
+  return cloud;
 }
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;

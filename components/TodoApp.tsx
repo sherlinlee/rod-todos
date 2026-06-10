@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AddTodoForm from "@/components/AddTodoForm";
 import CelebrationToast from "@/components/CelebrationToast";
 import ConfettiBurst from "@/components/ConfettiBurst";
@@ -23,6 +23,8 @@ import {
   uncompletePermanentTodo,
 } from "@/lib/essentials";
 import { migrateTodos, reorderTodos, sortByDueDate } from "@/lib/migrate";
+import { mergeSyncData } from "@/lib/sync-merge";
+import { debugLog } from "@/lib/debug-log";
 import { useCloudRefresh } from "@/hooks/useCloudRefresh";
 import {
   hydrateFromCloud,
@@ -33,7 +35,10 @@ import {
   refreshFromCloud,
   scheduleCloudPush,
   todoTombstoneKey,
+  writeLocalIdeas,
+  writeLocalJournal,
   writeLocalTodos,
+  writeLocalTombstones,
 } from "@/lib/sync-client";
 import type {
   Category,
@@ -66,6 +71,16 @@ export default function TodoApp() {
   const [hydrated, setHydrated] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [celebration, setCelebration] = useState<Celebration | null>(null);
+  const lastToggleRef = useRef<{
+    id: string;
+    expectedCompleted: boolean;
+    at: number;
+  } | null>(null);
+  const todosRef = useRef<Todo[]>([]);
+
+  useEffect(() => {
+    todosRef.current = todos;
+  }, [todos]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,15 +107,76 @@ export default function TodoApp() {
   }, []);
 
   const onCloudRefresh = useCallback(
-    (data: Awaited<ReturnType<typeof refreshFromCloud>>) => {
-      if (data) setTodos(data.todos);
+    (cloud: Awaited<ReturnType<typeof refreshFromCloud>>) => {
+      if (!cloud) return;
+      const localSnapshot = {
+        todos: todosRef.current,
+        ideas: readLocalIdeas(),
+        journal: readLocalJournal(),
+        tombstones: readLocalTombstones(),
+        updatedAt: Date.now(),
+      };
+      const merged = mergeSyncData(localSnapshot, cloud);
+      const last = lastToggleRef.current;
+      const localTodo = last
+        ? todosRef.current.find((t) => t.id === last.id)
+        : undefined;
+      const mergedTodo = last
+        ? merged.todos.find((t) => t.id === last.id)
+        : undefined;
+      const cloudTodo = last
+        ? cloud.todos.find((t) => t.id === last.id)
+        : undefined;
+      // #region agent log
+      debugLog(
+        "H1",
+        "TodoApp.tsx:onCloudRefresh",
+        "cloud refresh merged with react state",
+        {
+          lastToggleId: last?.id ?? null,
+          expectedCompleted: last?.expectedCompleted ?? null,
+          msSinceToggle: last ? Date.now() - last.at : null,
+          reactCompleted: localTodo?.completed ?? null,
+          cloudCompleted: cloudTodo?.completed ?? null,
+          mergedCompleted: mergedTodo?.completed ?? null,
+          willRevert:
+            last != null &&
+            localTodo?.completed === last.expectedCompleted &&
+            mergedTodo?.completed !== last.expectedCompleted,
+          activeFilter: statusFilter,
+        },
+        "post-fix",
+      );
+      // #endregion
+      if (
+        last != null &&
+        Date.now() - last.at < 3000 &&
+        localTodo?.completed === last.expectedCompleted &&
+        mergedTodo?.completed !== last.expectedCompleted
+      ) {
+        // #region agent log
+        debugLog(
+          "H1",
+          "TodoApp.tsx:onCloudRefresh",
+          "skipped revert during recent toggle",
+          { lastToggleId: last.id },
+          "post-fix",
+        );
+        // #endregion
+        return;
+      }
+      setTodos(merged.todos);
+      writeLocalTodos(merged.todos);
+      writeLocalIdeas(merged.ideas);
+      writeLocalJournal(merged.journal);
+      writeLocalTombstones(merged.tombstones ?? []);
     },
-    [],
+    [statusFilter],
   );
 
   useCloudRefresh(onCloudRefresh);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!hydrated) return;
     writeLocalTodos(todos);
     scheduleCloudPush(() => ({
@@ -198,14 +274,20 @@ export default function TodoApp() {
       }
 
       setCompletingId(id);
-      window.setTimeout(() => {
-        setTodos((prev) =>
-          prev.map((t) =>
-            t.id === id ? touchTodo(completePermanentTodo(t)) : t,
-          ),
+      lastToggleRef.current = { id, expectedCompleted: true, at: Date.now() };
+      setTodos((prev) => {
+        const next = prev.map((t) =>
+          t.id === id ? touchTodo(completePermanentTodo(t)) : t,
         );
-        setCompletingId(null);
-      }, 420);
+        // #region agent log
+        debugLog("H3", "TodoApp.tsx:toggleTodo", "ritual complete applied immediately", {
+          id,
+          completed: true,
+        }, "post-fix");
+        // #endregion
+        return next;
+      });
+      window.setTimeout(() => setCompletingId(null), 420);
       return;
     }
 
@@ -217,17 +299,23 @@ export default function TodoApp() {
     }
 
     setCompletingId(id);
-    window.setTimeout(() => {
-      setTodos((prev) => {
-        const next = prev.map((t) =>
-          t.id === id ? touchTodo({ ...t, completed: true }) : t,
-        );
-        const remaining = remainingRegularCount(next);
-        celebrate(remaining === 0);
-        return next;
-      });
-      setCompletingId(null);
-    }, 420);
+    lastToggleRef.current = { id, expectedCompleted: true, at: Date.now() };
+    setTodos((prev) => {
+      const next = prev.map((t) =>
+        t.id === id ? touchTodo({ ...t, completed: true }) : t,
+      );
+      const remaining = remainingRegularCount(next);
+      celebrate(remaining === 0);
+      // #region agent log
+      debugLog("H3", "TodoApp.tsx:toggleTodo", "complete applied immediately", {
+        id,
+        completed: true,
+        remainingActive: remaining,
+      }, "post-fix");
+      // #endregion
+      return next;
+    });
+    window.setTimeout(() => setCompletingId(null), 420);
   }
 
   function deleteTodo(id: string) {
