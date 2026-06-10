@@ -5,14 +5,14 @@ export default function RodCelebrationAvatar({ size = 96 }: { size?: number }) {
 
   return (
     <div
-      className="inline-flex items-end justify-center -space-x-1 animate-celebration-float"
+      className="inline-flex items-end justify-center animate-celebration-float"
       role="img"
       aria-label="Rod celebrating with a trophy"
     >
       <RodAvatar size={rodSize} />
       <span
-        className="mb-0.5 leading-none drop-shadow-sm"
-        style={{ fontSize: Math.round(rodSize * 0.8) }}
+        className="-ml-4 mb-1 leading-none drop-shadow-sm"
+        style={{ fontSize: Math.round(rodSize * 0.75) }}
         aria-hidden
       >
         🏆
