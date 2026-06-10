@@ -25,10 +25,10 @@ export default function AddTodoForm({
 }: AddTodoFormProps) {
   return (
     <form onSubmit={onSubmit}>
-      <div className="rounded-2xl border border-accent/40 bg-gradient-to-br from-accent-soft/25 via-paper to-white p-3 shadow-[0_4px_18px_rgb(255_122_26_/_0.12)]">
+      <div className="rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/10 via-paper to-card p-3 shadow-[0_4px_18px_var(--shadow)]">
         <div className="mb-2.5 flex items-center gap-2">
           <span
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent font-[family-name:var(--font-bangers)] text-base leading-none tracking-wide text-white shadow-sm"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent font-[family-name:var(--font-bangers)] text-base leading-none tracking-wide text-foreground shadow-sm"
             aria-hidden
           >
             +
@@ -50,13 +50,13 @@ export default function AddTodoForm({
           placeholder="Type your task here…"
           enterKeyHint="done"
           autoComplete="off"
-          className="mb-2 w-full rounded-xl border border-accent-soft/50 bg-white px-3.5 py-3 text-[15px] font-semibold text-foreground shadow-sm outline-none transition placeholder:font-normal placeholder:text-foreground/30 focus:border-accent focus:ring-2 focus:ring-accent/20"
+          className="mb-2 w-full rounded-xl border border-accent-soft/40 bg-input px-3.5 py-3 text-[15px] font-semibold text-foreground shadow-sm outline-none transition placeholder:font-normal placeholder:text-foreground/30 focus:border-accent focus:ring-2 focus:ring-accent/20"
           aria-label="New to-do"
         />
 
         <button
           type="submit"
-          className="w-full rounded-xl bg-accent py-2.5 font-extrabold tracking-wide text-white shadow-[0_3px_12px_rgb(255_122_26_/_0.3)] transition hover:bg-[#e86a10] active:scale-[0.98] disabled:opacity-40"
+          className="w-full rounded-xl bg-accent py-2.5 font-extrabold tracking-wide text-foreground shadow-[0_3px_12px_var(--shadow)] transition hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
           disabled={!input.trim()}
         >
           Add to list
@@ -77,7 +77,7 @@ export default function AddTodoForm({
               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition active:scale-95 ${
                 category === cat.id
                   ? cat.chipActive
-                  : "border border-accent-soft/35 bg-white/80 text-foreground/50"
+                  : "border border-accent-soft/30 bg-input/80 text-foreground/50"
               }`}
             >
               <span className="text-sm leading-none" aria-hidden>
@@ -96,7 +96,7 @@ export default function AddTodoForm({
             value={dueDate}
             min={todayString()}
             onChange={(e) => onDueDateChange(e.target.value)}
-            className="rounded-lg border border-accent-soft/45 bg-white/80 px-2 py-1 text-xs text-foreground outline-none focus:border-accent"
+            className="rounded-lg border border-accent-soft/40 bg-input/80 px-2 py-1 text-xs text-foreground outline-none focus:border-accent"
           />
         </label>
       </div>

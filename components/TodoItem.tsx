@@ -129,8 +129,8 @@ export default function TodoItem({
           <span
             className={`flex h-6 w-6 items-center justify-center rounded-full border ${
               showChecked
-                ? "border-accent bg-accent text-white"
-                : "border-accent-soft bg-white"
+                ? "border-accent bg-accent text-foreground"
+                : "border-accent-soft bg-input"
             } ${
               isChecking && !todo.completed
                 ? "animate-check-fill"
@@ -157,7 +157,7 @@ export default function TodoItem({
               type="text"
               value={draftText}
               onChange={(e) => setDraftText(e.target.value)}
-              className="w-full rounded-lg border border-accent-soft/60 bg-white px-2.5 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
+              className="w-full rounded-lg border border-accent-soft/60 bg-input px-2.5 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
               aria-label="Edit task"
             />
 
@@ -167,7 +167,7 @@ export default function TodoItem({
                 type="date"
                 value={draftDueDate}
                 onChange={(e) => setDraftDueDate(e.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-accent-soft/50 bg-white px-2 py-1.5 text-sm outline-none focus:border-accent"
+                className="min-w-0 flex-1 rounded-lg border border-accent-soft/50 bg-input px-2 py-1.5 text-sm outline-none focus:border-accent"
               />
               {draftDueDate && (
                 <button
@@ -189,7 +189,7 @@ export default function TodoItem({
                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                     draftCategory === cat.id
                       ? cat.pill
-                      : "bg-white/80 text-foreground/45"
+                      : "bg-input/80 text-foreground/45"
                   }`}
                 >
                   {cat.emoji} {cat.boxLabel}
@@ -201,7 +201,7 @@ export default function TodoItem({
               <button
                 type="button"
                 onClick={saveEdit}
-                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-white"
+                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-foreground"
               >
                 Save
               </button>
@@ -242,7 +242,7 @@ export default function TodoItem({
                         ? "bg-amber-100 text-amber-700"
                         : due.tone === "soon"
                           ? "bg-lavender text-foreground/70"
-                          : "bg-white/70 text-foreground/55"
+                          : "bg-input/70 text-foreground/55"
                     : "bg-lavender/40 text-foreground/50"
                 }`}
               >

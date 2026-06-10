@@ -120,7 +120,7 @@ export default function IdeaFlowApp() {
           </p>
         </header>
 
-        <section className="rounded-[1.25rem] border border-white/80 bg-card/90 p-3 shadow-[0_16px_40px_var(--shadow)] backdrop-blur-sm sm:p-4">
+        <section className="rounded-[1.25rem] border border-white/10 bg-card/90 p-3 shadow-[0_16px_40px_var(--shadow)] backdrop-blur-sm sm:p-4">
           <form onSubmit={addIdea} className="space-y-2.5">
             <textarea
               value={displayInput}
@@ -137,7 +137,7 @@ export default function IdeaFlowApp() {
             <div className="flex items-center gap-2">
               <button
                 type="submit"
-                className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-95"
+                className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-bold text-foreground shadow-sm transition active:scale-95"
               >
                 Lock it in
               </button>

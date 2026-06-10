@@ -441,7 +441,7 @@ export default function TodoApp() {
           <WeatherForecast />
         </div>
 
-        <section className="rounded-2xl border border-white/80 bg-card/90 p-3 shadow-[0_12px_40px_var(--shadow)] backdrop-blur-sm sm:p-4">
+        <section className="rounded-2xl border border-white/10 bg-card/90 p-3 shadow-[0_12px_40px_var(--shadow)] backdrop-blur-sm sm:p-4">
           <AddTodoForm
             input={input}
             category={category}
@@ -554,7 +554,7 @@ export default function TodoApp() {
               <button
                 type="button"
                 onClick={clearCompleted}
-                className="touch-target shrink-0 font-semibold text-accent transition active:text-[#ff7a9d]"
+                className="touch-target shrink-0 font-semibold text-accent transition active:text-accent-soft"
               >
                 Clear done
               </button>

@@ -48,7 +48,7 @@ export default function JournalArchive({
   }
 
   return (
-    <section className="mt-3 rounded-[1.25rem] border border-white/80 bg-card/90 p-3 shadow-[0_12px_32px_var(--shadow)] backdrop-blur-sm sm:p-4">
+    <section className="mt-3 rounded-[1.25rem] border border-white/10 bg-card/90 p-3 shadow-[0_12px_32px_var(--shadow)] backdrop-blur-sm sm:p-4">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -117,7 +117,7 @@ export default function JournalArchive({
                               <button
                                 type="button"
                                 onClick={() => toggleMonth(monthKey)}
-                                className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-white/50"
+                                className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-input/50"
                               >
                                 <span className="text-xs font-bold text-foreground/60">
                                   {group.label}
@@ -140,7 +140,7 @@ export default function JournalArchive({
                                         }
                                         className={`paper-slip w-full rounded-xl border px-2.5 py-2 text-left transition active:scale-[0.99] ${
                                           entry.date === today
-                                            ? "border-accent-soft/70 bg-white/80"
+                                            ? "border-accent-soft/70 bg-input/80"
                                             : "border-accent-soft/40 hover:border-accent-soft/65"
                                         }`}
                                       >

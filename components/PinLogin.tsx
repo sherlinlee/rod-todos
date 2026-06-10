@@ -92,7 +92,7 @@ export default function PinLogin() {
 
   return (
     <div className="safe-px safe-pt safe-pb mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-4">
-      <div className="w-full rounded-2xl border border-white/80 bg-card/90 p-6 text-center shadow-[0_12px_40px_var(--shadow)] backdrop-blur-sm sm:p-8">
+      <div className="w-full rounded-2xl border border-white/10 bg-card/90 p-6 text-center shadow-[0_12px_40px_var(--shadow)] backdrop-blur-sm sm:p-8">
         <div className="mb-5 flex flex-col items-center gap-2.5">
           <RodAvatar size={44} />
           <div>
@@ -129,7 +129,7 @@ export default function PinLogin() {
               value={digit}
               disabled={submitting}
               aria-label={`PIN digit ${index + 1}`}
-              className={`h-12 w-10 rounded-xl border-2 bg-white text-center text-lg font-bold outline-none transition sm:h-14 sm:w-12 ${
+              className={`h-12 w-10 rounded-xl border-2 bg-input text-center text-lg font-bold outline-none transition sm:h-14 sm:w-12 ${
                 error
                   ? "border-red-300 shake-pin"
                   : digit

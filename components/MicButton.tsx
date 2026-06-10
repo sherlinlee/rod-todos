@@ -30,8 +30,8 @@ export default function MicButton({
         aria-pressed={listening}
         className={`${dim} flex shrink-0 items-center justify-center rounded-full border-2 transition active:scale-95 ${
           listening
-            ? "animate-pulse border-accent bg-accent text-white shadow-md"
-            : "border-accent-soft/70 bg-white text-foreground/70 hover:border-accent hover:text-accent"
+            ? "animate-pulse border-accent bg-accent text-foreground shadow-md"
+            : "border-accent-soft/70 bg-input text-foreground/70 hover:border-accent hover:text-accent"
         }`}
       >
         {listening ? "◼" : "🎙️"}

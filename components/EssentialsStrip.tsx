@@ -41,15 +41,15 @@ export default function EssentialsStrip({
               isFlying ? "animate-complete-fly" : ""
             } ${isChecking ? "bg-accent/[0.06]" : ""} ${
               todo.completed || isChecking
-                ? "border-accent-soft/50 bg-white/70 text-foreground/40 line-through"
-                : "border-accent-soft/70 bg-white text-foreground"
+                ? "border-accent-soft/50 bg-input/70 text-foreground/40 line-through"
+                : "border-accent-soft/70 bg-input text-foreground"
             }`}
           >
             <span
               className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] ${
                 todo.completed || isChecking
-                  ? "border-accent bg-accent text-white"
-                  : "border-accent-soft/80 bg-white"
+                  ? "border-accent bg-accent text-foreground"
+                  : "border-accent-soft/80 bg-input"
               } ${
                 isChecking && !todo.completed
                   ? "animate-check-fill"
