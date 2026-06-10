@@ -110,7 +110,7 @@ export default function IdeaFlowApp() {
             idea flow
           </h1>
           <p className="mt-1.5 flex flex-wrap items-center justify-center gap-x-1.5 text-sm text-foreground/70">
-            <span>whisper it, type it, catch the spark</span>
+            <span>say it, type it, lock it in</span>
             <RodAvatar size={28} />
           </p>
         </header>
@@ -123,7 +123,7 @@ export default function IdeaFlowApp() {
                 setLiveTranscript("");
                 setInput(e.target.value);
               }}
-              placeholder="a thought, a spark, a maybe…"
+              placeholder="hit me with a solid idea…"
               rows={3}
               className="paper-slip w-full resize-none rounded-xl border-2 border-accent-soft/60 px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-xs placeholder:text-foreground/35 focus:border-accent focus:ring-2 focus:ring-accent/15"
               aria-label="New idea"
@@ -134,7 +134,7 @@ export default function IdeaFlowApp() {
                 type="submit"
                 className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-bold text-white shadow-sm transition active:scale-95"
               >
-                Catch idea
+                Lock it in
               </button>
               <MicButton
                 onTranscript={appendTranscript}
@@ -154,10 +154,10 @@ export default function IdeaFlowApp() {
             <div className="rounded-xl bg-background/70 px-3 py-8 text-center">
               <p className="animate-float-gentle text-2xl">💭</p>
               <p className="mt-2 text-sm font-semibold leading-relaxed text-foreground/70">
-                nothing here yet… whisper something lovely 🎙️
+                nothing here yet… drop a killer idea 🎙️
                 <br />
                 <span className="text-foreground/50">
-                  or type whatever&apos;s floating around
+                  or type whatever&apos;s on your mind
                 </span>
               </p>
             </div>

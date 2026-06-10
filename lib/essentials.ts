@@ -1,6 +1,7 @@
 import { todayString } from "@/lib/dates";
 import type { Todo } from "@/lib/types";
 
+/** Legacy Belle ritual — stripped from Rod's app */
 export const PILLS_ID = "essential-birth-control";
 export const DEVOTION_ID = "essential-devotion";
 
@@ -8,17 +9,6 @@ export const DEVOTION_ID = "essential-devotion";
 export const BIRTH_CONTROL_ID = PILLS_ID;
 
 const ESSENTIAL_TEMPLATES: Todo[] = [
-  {
-    id: PILLS_ID,
-    text: "💊 pills",
-    completed: false,
-    createdAt: 0,
-    dueDate: null,
-    category: "personal",
-    order: -1000,
-    permanent: true,
-    lastCompletedDate: null,
-  },
   {
     id: DEVOTION_ID,
     text: "devotion + pray",
@@ -37,13 +27,14 @@ const templateById = new Map(
 );
 
 export function isPermanentTodo(todo: Todo) {
-  return todo.permanent === true;
+  return todo.permanent === true && todo.id !== PILLS_ID;
 }
 
 export function ensureEssentials(todos: Todo[]): Todo[] {
   const today = todayString();
+  const withoutPills = todos.filter((todo) => todo.id !== PILLS_ID);
 
-  const synced = todos.map((todo) => {
+  const synced = withoutPills.map((todo) => {
     if (!todo.permanent) return todo;
 
     const template = templateById.get(todo.id);

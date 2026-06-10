@@ -385,7 +385,7 @@ export default function TodoApp() {
                   ? "Nothing checked off yet — you've got this!"
                   : statusFilter === "active"
                     ? "All caught up! Time for a tiny celebration."
-                    : "Your box is empty. Add something sweet above."}
+                    : "Nothing in the list yet — add a task above."}
               </p>
             </div>
           ) : (

@@ -12,8 +12,8 @@ export const CATEGORIES: {
   {
     id: "personal",
     label: "Personal",
-    boxLabel: "Pink box",
-    emoji: "🌸",
+    boxLabel: "Chill box",
+    emoji: "🏠",
     pill: "bg-accent-soft/50 text-foreground",
     boxActive: "border-accent bg-accent-soft/35 ring-4 ring-accent/15",
     boxIdle: "border-accent-soft/70 bg-paper hover:border-accent/50",
@@ -21,8 +21,8 @@ export const CATEGORIES: {
   {
     id: "work",
     label: "Work",
-    boxLabel: "Forest box",
-    emoji: "🌿",
+    boxLabel: "Toolbox",
+    emoji: "🧰",
     pill: "bg-mint/60 text-foreground",
     boxActive: "border-forest bg-mint/40 ring-4 ring-forest/20",
     boxIdle: "border-mint bg-paper hover:border-forest/50",
