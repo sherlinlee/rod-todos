@@ -157,14 +157,7 @@ export default function JournalArchive({
                                             : "border-accent-soft/40"
                                         }`}
                                       >
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            toggleEntry(entry.date)
-                                          }
-                                          className="flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left"
-                                          aria-expanded={entryOpen}
-                                        >
+                                        <div className="flex items-center justify-between gap-2 px-2.5 pt-2">
                                           <div className="flex min-w-0 items-center gap-2">
                                             <p className="text-[10px] font-bold text-foreground/50">
                                               {formatJournalDate(entry.date)}
@@ -175,27 +168,36 @@ export default function JournalArchive({
                                               </span>
                                             )}
                                           </div>
-                                          <span className="shrink-0 text-[10px] font-semibold text-foreground/40">
-                                            {entryOpen ? "▾" : "▸"}
-                                          </span>
-                                        </button>
+                                        </div>
 
                                         {entryOpen ? (
-                                          <div className="border-t border-accent-soft/25 px-2.5 pb-2.5 pt-2">
+                                          <div className="px-2.5 pb-2.5 pt-1">
                                             <div className="max-h-56 overflow-y-auto rounded-lg border border-accent-soft/20 bg-white/80 px-2.5 py-2">
                                               <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/85">
                                                 {entry.text}
                                               </p>
                                             </div>
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                onSelectDate?.(entry.date)
-                                              }
-                                              className="mt-2 text-[11px] font-bold text-accent underline-offset-2 hover:underline"
-                                            >
-                                              Edit entry
-                                            </button>
+                                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  toggleEntry(entry.date)
+                                                }
+                                                className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-bold text-accent"
+                                              >
+                                                Show less
+                                                <span aria-hidden>▾</span>
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  onSelectDate?.(entry.date)
+                                                }
+                                                className="text-[11px] font-bold text-accent underline-offset-2 hover:underline"
+                                              >
+                                                Edit entry
+                                              </button>
+                                            </div>
                                           </div>
                                         ) : (
                                           <button
@@ -203,11 +205,16 @@ export default function JournalArchive({
                                             onClick={() =>
                                               toggleEntry(entry.date)
                                             }
-                                            className="w-full px-2.5 pb-2 text-left"
+                                            className="w-full px-2.5 pb-2.5 pt-1 text-left"
+                                            aria-expanded={false}
                                           >
                                             <p className="line-clamp-2 whitespace-pre-wrap break-words text-sm leading-snug text-foreground/70">
                                               {entry.text}
                                             </p>
+                                            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-bold text-accent">
+                                              Tap for more
+                                              <span aria-hidden>▸</span>
+                                            </span>
                                           </button>
                                         )}
                                       </li>
