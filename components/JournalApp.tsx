@@ -41,6 +41,10 @@ export default function JournalApp() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const skipSaveIndicator = useRef(true);
   const prevToday = useRef(today);
+  const [draftText, setDraftText] = useState("");
+  const isEditingRef = useRef(false);
+  const isFocusedRef = useRef(false);
+  const saveTimerRef = useRef<number | null>(null);
 
   const verse = useMemo(() => verseForDate(today), [today]);
   const archive = useMemo(() => groupJournalArchive(entries), [entries]);
@@ -69,13 +73,12 @@ export default function JournalApp() {
     prevToday.current = today;
   }, [today, writingDate]);
 
-  const reflection = entryForDate(entries, writingDate)?.text ?? "";
   const isWritingToday = writingDate === today;
   const displayReflection = liveTranscript
-    ? reflection
-      ? `${reflection} ${liveTranscript}`
+    ? draftText
+      ? `${draftText}${draftText.endsWith(" ") ? "" : " "}${liveTranscript}`
       : liveTranscript
-    : reflection;
+    : draftText;
 
   useEffect(() => {
     let cancelled = false;
@@ -101,11 +104,25 @@ export default function JournalApp() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!hydrated) return;
+    if (isEditingRef.current || isFocusedRef.current) return;
+    setDraftText(entryForDate(entries, writingDate)?.text ?? "");
+  }, [hydrated, entries, writingDate]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
   const onCloudRefresh = useCallback(
     (data: Awaited<ReturnType<typeof refreshFromCloud>>) => {
-      if (data) setEntries(data.journal);
+      if (!data || isEditingRef.current || isFocusedRef.current) return;
+      setEntries(data.journal);
+      setDraftText(entryForDate(data.journal, writingDate)?.text ?? "");
     },
-    [],
+    [writingDate],
   );
 
   useCloudRefresh(onCloudRefresh);
@@ -138,12 +155,28 @@ export default function JournalApp() {
     return () => window.clearTimeout(timer);
   }, [entries, hydrated, writingDate]);
 
+  function flushDraft(date = writingDate, text = draftText) {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    if (!text.trim()) {
+      recordTombstone(journalTombstoneKey(date));
+    }
+    const next = upsertJournalEntry(entries, date, text);
+    setEntries(next);
+    isEditingRef.current = false;
+    return next;
+  }
+
   function selectWritingDate(date: string) {
     if (!date || date > today) return;
+    const nextEntries = flushDraft();
     setLiveTranscript("");
     setWritingDate(date);
+    setDraftText(entryForDate(nextEntries, date)?.text ?? "");
     skipSaveIndicator.current = true;
-    const existing = entryForDate(entries, date)?.text?.trim() ?? "";
+    const existing = entryForDate(nextEntries, date)?.text?.trim() ?? "";
     setSaveStatus(existing ? "saved" : "idle");
   }
 
@@ -163,38 +196,60 @@ export default function JournalApp() {
     setSaveStatus("saving");
   }
 
-  function updateReflection(text: string) {
+  function updateReflection(text: string, date = writingDate) {
     if (!text.trim()) {
-      recordTombstone(journalTombstoneKey(writingDate));
+      recordTombstone(journalTombstoneKey(date));
     }
-    setEntries((prev) => upsertJournalEntry(prev, writingDate, text));
+    setEntries((prev) => upsertJournalEntry(prev, date, text));
   }
 
   function handleReflectionChange(text: string) {
     setLiveTranscript("");
+    isEditingRef.current = true;
+    setDraftText(text);
     markSaving();
-    updateReflection(text);
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      updateReflection(text);
+      isEditingRef.current = false;
+      saveTimerRef.current = null;
+    }, 500);
+  }
+
+  function handleReflectionBlur() {
+    isFocusedRef.current = false;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    updateReflection(draftText);
+    isEditingRef.current = false;
+  }
+
+  function handleReflectionFocus() {
+    isFocusedRef.current = true;
   }
 
   function appendTranscript(chunk: string) {
     markSaving();
-    setEntries((prev) => {
-      const current = entryForDate(prev, writingDate)?.text ?? "";
-      return upsertJournalEntry(
-        prev,
-        writingDate,
-        current ? `${current} ${chunk}` : chunk,
-      );
-    });
+    isEditingRef.current = true;
+    const nextText = draftText
+      ? `${draftText}${draftText.endsWith(" ") ? "" : " "}${chunk}`
+      : chunk;
+    setDraftText(nextText);
+    updateReflection(nextText);
     setLiveTranscript("");
+    isEditingRef.current = false;
   }
 
   function editFromArchive(date: string) {
     selectWritingDate(date);
     setShowDatePicker(true);
-    document.getElementById("journal-reflection")?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById("journal-reflection")
+        ?.focus({ preventScroll: true });
     });
   }
 
@@ -293,17 +348,15 @@ export default function JournalApp() {
                 id="journal-reflection"
                 value={displayReflection}
                 onChange={(e) => handleReflectionChange(e.target.value)}
+                onFocus={handleReflectionFocus}
+                onBlur={handleReflectionBlur}
                 placeholder={
                   isWritingToday
                     ? "what stood out to you today? prayers, gratitude, notes…"
                     : "catch up on this day…"
                 }
                 rows={8}
-                className={`paper-slip w-full resize-y rounded-xl border-2 px-3 py-2.5 text-sm leading-relaxed text-foreground outline-none transition placeholder:text-xs placeholder:text-foreground/35 focus:border-accent focus:ring-2 focus:ring-accent/15 ${
-                  saveStatus === "saved" && !liveTranscript
-                    ? "border-forest/35 ring-1 ring-mint/30"
-                    : "border-accent-soft/60"
-                }`}
+                className="paper-slip w-full resize-y rounded-xl border border-accent-soft/60 px-3 py-2.5 text-sm leading-relaxed text-foreground outline-none transition placeholder:text-xs placeholder:text-foreground/35 focus:border-accent focus:ring-2 focus:ring-accent/15"
               />
               <div className="mt-2 flex items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] font-semibold text-foreground/35">
