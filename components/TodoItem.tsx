@@ -89,11 +89,11 @@ export default function TodoItem({
             : "hover:border-accent/40"
       } ${isCompleting ? "animate-complete-fly" : "animate-pop-in"}`}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-1.5">
         <button
           type="button"
           disabled={editing}
-          className="flex h-11 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-foreground/20 transition hover:text-accent active:cursor-grabbing disabled:opacity-30 sm:h-7 sm:w-5"
+          className="flex h-8 w-5 shrink-0 cursor-grab touch-none items-center justify-center text-foreground/20 transition hover:text-accent active:cursor-grabbing disabled:opacity-30 sm:h-7"
           aria-label={`Drag to reorder ${todo.text}`}
           {...attributes}
           {...listeners}
@@ -117,15 +117,19 @@ export default function TodoItem({
               ? `Mark "${todo.text}" as incomplete`
               : `Mark "${todo.text}" as complete`
           }
-          className={`touch-target flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 transition disabled:opacity-40 sm:h-6 sm:w-6 sm:border ${
-            todo.completed
-              ? "border-accent bg-accent text-white"
-              : "border-accent bg-white active:scale-95"
-          }`}
+          className="tap-pad flex shrink-0 items-center justify-center disabled:opacity-40"
         >
-          {todo.completed && (
-            <span className="text-sm leading-none sm:text-[10px]">✓</span>
-          )}
+          <span
+            className={`flex h-6 w-6 items-center justify-center rounded-full border transition active:scale-95 ${
+              todo.completed
+                ? "border-accent bg-accent text-white"
+                : "border-accent-soft bg-white"
+            }`}
+          >
+            {todo.completed && (
+              <span className="text-[10px] leading-none">✓</span>
+            )}
+          </span>
         </button>
 
         {editing ? (
@@ -230,12 +234,12 @@ export default function TodoItem({
         )}
 
         {!editing && (
-          <div className="flex shrink-0 flex-col gap-0.5 sm:flex-row sm:gap-0">
+          <div className="flex shrink-0 items-center gap-0.5 pt-0.5">
             <button
               type="button"
               onClick={startEdit}
               aria-label={`Edit "${todo.text}"`}
-              className="touch-target flex h-11 w-11 items-center justify-center rounded-xl text-lg text-foreground/45 active:bg-accent-soft/25 active:text-accent sm:h-8 sm:w-8 sm:text-xs sm:opacity-0 sm:group-hover:opacity-100"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-sm text-foreground/40 active:bg-accent-soft/25 active:text-accent sm:h-7 sm:w-7 sm:text-xs sm:opacity-0 sm:group-hover:opacity-100"
             >
               ✎
             </button>
@@ -243,7 +247,7 @@ export default function TodoItem({
               type="button"
               onClick={() => onDelete(todo.id)}
               aria-label={`Delete "${todo.text}"`}
-              className="touch-target flex h-11 w-11 items-center justify-center rounded-xl text-lg text-foreground/45 active:bg-accent-soft/25 active:text-accent sm:h-8 sm:w-8 sm:text-xs sm:opacity-0 sm:group-hover:opacity-100"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-sm text-foreground/40 active:bg-accent-soft/25 active:text-accent sm:h-7 sm:w-7 sm:text-xs sm:opacity-0 sm:group-hover:opacity-100"
             >
               ✕
             </button>

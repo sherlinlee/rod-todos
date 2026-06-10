@@ -33,7 +33,7 @@ export default function EssentialsStrip({
                 ? `Mark "${todo.text}" as not done today`
                 : `Mark "${todo.text}" as done today`
             }
-            className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition active:scale-95 sm:min-h-0 sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs ${
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-semibold transition active:scale-95 sm:py-1 ${
               completingId === todo.id ? "animate-complete-fly" : ""
             } ${
               todo.completed
@@ -42,7 +42,7 @@ export default function EssentialsStrip({
             }`}
           >
             <span
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs sm:h-4 sm:w-4 sm:text-[9px] ${
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] ${
                 todo.completed
                   ? "border-accent bg-accent text-white"
                   : "border-accent-soft/80 bg-white"
