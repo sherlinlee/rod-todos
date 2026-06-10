@@ -152,6 +152,24 @@ body {
   }
 }
 
+@keyframes bolt-sparkle {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg) scale(1);
+    filter: drop-shadow(0 0 1px rgb(255 212 79 / 0.5));
+  }
+  35% {
+    transform: translateY(-4px) rotate(5deg) scale(1.1);
+    filter: drop-shadow(0 0 5px rgb(255 212 79 / 0.95))
+      drop-shadow(0 0 8px rgb(255 122 26 / 0.45));
+  }
+  70% {
+    transform: translateY(-2px) rotate(-3deg) scale(1.05);
+    filter: drop-shadow(0 0 3px rgb(255 255 255 / 0.7))
+      drop-shadow(0 0 6px rgb(255 212 79 / 0.75));
+  }
+}
+
 @keyframes check-pop {
   0% {
     transform: scale(1);
@@ -326,6 +344,11 @@ body {
 
 .animate-rod-bob {
   animation: rod-bob 3s ease-in-out infinite;
+}
+
+.animate-bolt-sparkle {
+  animation: bolt-sparkle 2.6s ease-in-out infinite;
+  display: inline-block;
 }
 
 .animate-complete-fly {

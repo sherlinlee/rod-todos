@@ -405,7 +405,12 @@ export default function TodoApp() {
             {bootstrapped && (
               <>
                 <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-accent-soft/50 bg-card/90 px-3.5 py-2 text-xs font-semibold text-foreground/75 shadow-sm backdrop-blur-sm sm:px-4 sm:text-sm">
-                  <span className="text-lg leading-none" aria-hidden>
+                  <span
+                    className={`text-lg leading-none ${
+                      activeCount === 0 ? "" : "animate-bolt-sparkle"
+                    }`}
+                    aria-hidden
+                  >
                     {activeCount === 0 ? "✓" : "⚡"}
                   </span>
                   <p>
