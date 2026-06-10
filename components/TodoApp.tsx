@@ -382,7 +382,7 @@ export default function TodoApp() {
             <div className="rounded-2xl bg-background/70 px-3 py-10 text-center sm:px-4 sm:py-12">
               {statusFilter === "active" ? (
                 <div className="flex justify-center">
-                  <RodCelebrationAvatar size={76} />
+                  <RodCelebrationAvatar size={100} />
                 </div>
               ) : (
                 <p className="animate-float-gentle text-3xl">
@@ -393,7 +393,7 @@ export default function TodoApp() {
                 {statusFilter === "completed"
                   ? "Nothing checked off yet — you've got this!"
                   : statusFilter === "active"
-                    ? "All caught up! Time for a tiny celebration."
+                    ? "All caught up — nice one, Rod."
                     : "Nothing in the list yet — add a task above."}
               </p>
             </div>
