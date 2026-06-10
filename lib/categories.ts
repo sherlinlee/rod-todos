@@ -22,7 +22,7 @@ export const CATEGORIES: {
     id: "work",
     label: "Work",
     boxLabel: "Toolbox",
-    emoji: "🧰",
+    emoji: "🔧",
     pill: "bg-mint/60 text-foreground",
     boxActive: "border-forest bg-mint/40 ring-4 ring-forest/20",
     boxIdle: "border-mint bg-paper hover:border-forest/50",
