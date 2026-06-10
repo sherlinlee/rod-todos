@@ -25,20 +25,20 @@ export default function AddTodoForm({
 }: AddTodoFormProps) {
   return (
     <form onSubmit={onSubmit}>
-      <div className="rounded-2xl border-2 border-accent/35 bg-gradient-to-br from-accent-soft/30 via-paper to-white p-3.5 shadow-[0_6px_24px_rgb(255_122_26_/_0.14)] sm:p-4">
-        <div className="mb-3 flex items-center gap-2.5">
+      <div className="rounded-2xl border border-accent/40 bg-gradient-to-br from-accent-soft/25 via-paper to-white p-3 shadow-[0_4px_18px_rgb(255_122_26_/_0.12)]">
+        <div className="mb-2.5 flex items-center gap-2">
           <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold leading-none text-white shadow-sm"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent font-[family-name:var(--font-bangers)] text-base leading-none tracking-wide text-white shadow-sm"
             aria-hidden
           >
             +
           </span>
           <div>
-            <p className="text-base font-bold leading-tight text-foreground">
+            <p className="font-[family-name:var(--font-bangers)] text-lg leading-none tracking-wide text-foreground">
               Add a to-do
             </p>
-            <p className="text-xs text-foreground/50">
-              Type it below, then hit Add
+            <p className="mt-0.5 text-[11px] font-semibold text-foreground/45">
+              What needs doing?
             </p>
           </div>
         </div>
@@ -47,22 +47,25 @@ export default function AddTodoForm({
           type="text"
           value={input}
           onChange={(e) => onInputChange(e.target.value)}
-          placeholder="What needs doing?"
-          className="mb-2.5 w-full rounded-xl border-2 border-white/90 bg-white px-4 py-4 text-base text-foreground shadow-sm outline-none transition placeholder:text-base placeholder:font-normal placeholder:text-foreground/30 focus:border-accent focus:ring-4 focus:ring-accent/15"
+          placeholder="Type your task here…"
+          enterKeyHint="done"
+          autoComplete="off"
+          className="mb-2 w-full rounded-xl border border-accent-soft/50 bg-white px-3.5 py-3 text-[15px] font-semibold text-foreground shadow-sm outline-none transition placeholder:font-normal placeholder:text-foreground/30 focus:border-accent focus:ring-2 focus:ring-accent/20"
           aria-label="New to-do"
         />
 
         <button
           type="submit"
-          className="animate-wiggle w-full rounded-xl bg-accent py-3.5 text-base font-bold text-white shadow-[0_4px_14px_rgb(255_122_26_/_0.35)] transition hover:bg-[#e86a10] active:scale-[0.98]"
+          className="w-full rounded-xl bg-accent py-2.5 font-extrabold tracking-wide text-white shadow-[0_3px_12px_rgb(255_122_26_/_0.3)] transition hover:bg-[#e86a10] active:scale-[0.98] disabled:opacity-40"
+          disabled={!input.trim()}
         >
           Add to list
         </button>
       </div>
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 px-0.5">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground/35">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 px-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-foreground/35">
             Box
           </span>
           {CATEGORIES.map((cat) => (
@@ -71,13 +74,13 @@ export default function AddTodoForm({
               type="button"
               onClick={() => onCategoryChange(cat.id)}
               aria-pressed={category === cat.id}
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold transition active:scale-95 ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition active:scale-95 ${
                 category === cat.id
                   ? cat.chipActive
-                  : "bg-background/80 text-foreground/45 hover:text-foreground/65"
+                  : "border border-accent-soft/35 bg-white/80 text-foreground/50"
               }`}
             >
-              <span className="text-xs leading-none" aria-hidden>
+              <span className="text-sm leading-none" aria-hidden>
                 {cat.emoji}
               </span>
               {cat.boxLabel}
@@ -85,7 +88,7 @@ export default function AddTodoForm({
           ))}
         </div>
 
-        <label className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-foreground/40">
+        <label className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground/45">
           <span aria-hidden>📅</span>
           <span className="sr-only">Due date</span>
           <input
@@ -93,7 +96,7 @@ export default function AddTodoForm({
             value={dueDate}
             min={todayString()}
             onChange={(e) => onDueDateChange(e.target.value)}
-            className="rounded-md border border-accent-soft/40 bg-white/70 px-1.5 py-0.5 text-[11px] text-foreground outline-none focus:border-accent"
+            className="rounded-lg border border-accent-soft/45 bg-white/80 px-2 py-1 text-xs text-foreground outline-none focus:border-accent"
           />
         </label>
       </div>

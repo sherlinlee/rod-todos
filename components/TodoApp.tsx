@@ -29,6 +29,7 @@ import { mergeSyncData } from "@/lib/sync-merge";
 import { useCloudRefresh } from "@/hooks/useCloudRefresh";
 import {
   hydrateFromCloud,
+  buildLocalSnapshot,
   readLocalIdeas,
   readLocalJournal,
   readLocalTombstones,
@@ -49,7 +50,10 @@ import type {
 } from "@/lib/types";
 
 function createId() {
-  return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 function touchTodo(todo: Todo): Todo {
@@ -84,6 +88,7 @@ export default function TodoApp() {
     expectedCompleted: boolean;
     at: number;
   } | null>(null);
+  const lastAddRef = useRef(0);
   const todosRef = useRef<Todo[]>([]);
 
   useEffect(() => {
@@ -117,13 +122,14 @@ export default function TodoApp() {
   const onCloudRefresh = useCallback(
     (cloud: Awaited<ReturnType<typeof refreshFromCloud>>) => {
       if (!cloud) return;
-      const localSnapshot = {
-        todos: todosRef.current,
-        ideas: readLocalIdeas(),
-        journal: readLocalJournal(),
-        tombstones: readLocalTombstones(),
-        updatedAt: Date.now(),
-      };
+      if (lastAddRef.current && Date.now() - lastAddRef.current < 4000) {
+        return;
+      }
+      const localSnapshot = buildLocalSnapshot();
+      localSnapshot.updatedAt = Math.max(
+        localSnapshot.updatedAt,
+        Date.now(),
+      );
       const merged = mergeSyncData(localSnapshot, cloud);
       const last = lastToggleRef.current;
       const localTodo = last
@@ -140,13 +146,14 @@ export default function TodoApp() {
       ) {
         return;
       }
+      todosRef.current = merged.todos;
       setTodos(merged.todos);
       writeLocalTodos(merged.todos);
       writeLocalIdeas(merged.ideas);
       writeLocalJournal(merged.journal);
       writeLocalTombstones(merged.tombstones ?? []);
     },
-    [statusFilter],
+    [],
   );
 
   useCloudRefresh(onCloudRefresh);
@@ -224,23 +231,36 @@ export default function TodoApp() {
     if (!text) return;
 
     const maxOrder = todos.reduce((max, t) => Math.max(max, t.order), -1);
-
     const now = Date.now();
-    setTodos((prev) => [
-      ...prev,
-      {
-        id: createId(),
-        text,
-        completed: false,
-        createdAt: now,
-        updatedAt: now,
-        dueDate: dueDate || null,
-        category,
-        order: maxOrder + 1,
-      },
-    ]);
+    const newTodo: Todo = {
+      id: createId(),
+      text,
+      completed: false,
+      createdAt: now,
+      updatedAt: now,
+      dueDate: dueDate || null,
+      category,
+      order: maxOrder + 1,
+    };
+    const next = [...todos, newTodo];
+
+    lastAddRef.current = now;
+    todosRef.current = next;
+    writeLocalTodos(next);
+    setTodos(next);
     setInput("");
     setDueDate("");
+    setStatusFilter("active");
+    if (categoryFilter !== "all" && categoryFilter !== category) {
+      setCategoryFilter("all");
+    }
+    scheduleCloudPush(() => ({
+      todos: next,
+      ideas: readLocalIdeas(),
+      journal: readLocalJournal(),
+      tombstones: readLocalTombstones(),
+      updatedAt: now,
+    }));
   }
 
   function toggleTodo(id: string) {
