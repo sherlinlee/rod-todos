@@ -5,10 +5,14 @@ import { migrateTodos } from "@/lib/migrate";
 import type { RodSyncData } from "@/lib/sync-types";
 import type { Todo } from "@/lib/types";
 
+function todoUpdatedAt(todo: Todo): number {
+  return todo.updatedAt ?? todo.createdAt;
+}
+
 function mergeById<T extends { id: string }>(
   local: T[],
   cloud: T[],
-  cloudIsNewer: boolean,
+  getUpdatedAt: (item: T) => number,
 ): T[] {
   const map = new Map<string, T>();
 
@@ -17,11 +21,12 @@ function mergeById<T extends { id: string }>(
   }
 
   for (const item of cloud) {
-    if (!map.has(item.id)) {
+    const existing = map.get(item.id);
+    if (!existing) {
       map.set(item.id, item);
       continue;
     }
-    if (cloudIsNewer) {
+    if (getUpdatedAt(item) > getUpdatedAt(existing)) {
       map.set(item.id, item);
     }
   }
@@ -49,31 +54,39 @@ function mergeJournal(
   return [...map.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
 
+function syncPayloadKey(data: RodSyncData): string {
+  const todos = [...data.todos].sort((a, b) => a.id.localeCompare(b.id));
+  const ideas = [...data.ideas].sort((a, b) => a.id.localeCompare(b.id));
+  const journal = [...(data.journal ?? [])].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
+  return JSON.stringify({ todos, ideas, journal });
+}
+
 export function mergeSyncData(
   local: RodSyncData,
   cloud: RodSyncData,
 ): RodSyncData {
-  const cloudIsNewer = cloud.updatedAt >= local.updatedAt;
-
   const todos = ensureEssentials(
-    migrateTodos(mergeById(local.todos, cloud.todos, cloudIsNewer)),
+    migrateTodos(mergeById(local.todos, cloud.todos, todoUpdatedAt)),
   );
 
-  const ideas = mergeById(local.ideas, cloud.ideas, cloudIsNewer).sort(
+  const ideas = mergeById(local.ideas, cloud.ideas, (idea) => idea.createdAt).sort(
     (a, b) => b.createdAt - a.createdAt,
   );
 
-  const journal = mergeJournal(
-    local.journal ?? [],
-    cloud.journal ?? [],
-  );
+  const journal = mergeJournal(local.journal ?? [], cloud.journal ?? []);
 
   return {
     todos,
     ideas,
     journal,
-    updatedAt: Math.max(local.updatedAt, cloud.updatedAt, Date.now()),
+    updatedAt: Math.max(local.updatedAt, cloud.updatedAt),
   };
+}
+
+export function needsCloudPush(merged: RodSyncData, cloud: RodSyncData) {
+  return syncPayloadKey(merged) !== syncPayloadKey(cloud);
 }
 
 export function hasUserContent(data: RodSyncData) {

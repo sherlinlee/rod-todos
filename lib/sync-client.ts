@@ -2,7 +2,11 @@ import type { Idea } from "@/lib/ideas";
 import { loadJournal, saveJournal, type JournalEntry } from "@/lib/journal";
 import { ensureEssentials } from "@/lib/essentials";
 import { migrateTodos } from "@/lib/migrate";
-import { hasUserContent, mergeSyncData } from "@/lib/sync-merge";
+import {
+  hasUserContent,
+  mergeSyncData,
+  needsCloudPush,
+} from "@/lib/sync-merge";
 import {
   type RodSyncData,
   SYNC_META_KEY,
@@ -74,7 +78,10 @@ function writeSyncMeta(meta: SyncMeta) {
 
 export async function fetchCloudSync(): Promise<RodSyncData | null> {
   try {
-    const res = await fetch("/api/sync", { cache: "no-store" });
+    const res = await fetch("/api/sync", {
+      cache: "no-store",
+      credentials: "include",
+    });
     if (!res.ok) return null;
     const json = (await res.json()) as {
       ok: boolean;
@@ -97,6 +104,7 @@ export async function pushCloudSync(data: RodSyncData): Promise<boolean> {
     const res = await fetch("/api/sync", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(data),
     });
     if (!res.ok) return false;
@@ -105,6 +113,39 @@ export async function pushCloudSync(data: RodSyncData): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+let pushChain: Promise<boolean> = Promise.resolve(true);
+
+function localRevision(local: RodSyncData): number {
+  return Math.max(readSyncMeta().updatedAt, local.updatedAt);
+}
+
+async function pushCloudSyncMerged(local: RodSyncData): Promise<boolean> {
+  pushChain = pushChain.then(async () => {
+    const cloud = await fetchCloudSync();
+    const revision = localRevision(local);
+    const localWithRevision = { ...local, updatedAt: revision };
+
+    if (!cloud) {
+      const payload = { ...localWithRevision, updatedAt: Date.now() };
+      applyCloudData(payload);
+      return pushCloudSync(payload);
+    }
+
+    const merged = mergeSyncData(localWithRevision, cloud);
+    applyCloudData(merged);
+
+    if (!needsCloudPush(merged, cloud)) {
+      return true;
+    }
+
+    const payload = { ...merged, updatedAt: Date.now() };
+    applyCloudData(payload);
+    return pushCloudSync(payload);
+  });
+
+  return pushChain;
 }
 
 export function buildLocalSnapshot(): RodSyncData {
@@ -129,26 +170,15 @@ export async function hydrateFromCloud(): Promise<RodSyncData> {
 
   if (!cloud) {
     if (hasUserContent(local)) {
-      const seed = { ...local, updatedAt: Date.now() };
-      void pushCloudSync(seed);
+      await pushCloudSyncMerged(local);
+      return buildLocalSnapshot();
     }
     return local;
   }
 
   const merged = mergeSyncData(local, cloud);
   applyCloudData(merged);
-
-  const shouldPush =
-    merged.updatedAt > cloud.updatedAt ||
-    merged.ideas.length !== cloud.ideas.length ||
-    merged.todos.length !== cloud.todos.length ||
-    merged.journal.length !== (cloud.journal ?? []).length;
-
-  if (shouldPush) {
-    const payload = { ...merged, updatedAt: Date.now() };
-    applyCloudData(payload);
-    await pushCloudSync(payload);
-  }
+  await pushCloudSyncMerged(buildLocalSnapshot());
 
   return merged;
 }
@@ -160,12 +190,7 @@ export async function refreshFromCloud(): Promise<RodSyncData | null> {
 
   const merged = mergeSyncData(local, cloud);
   applyCloudData(merged);
-
-  if (merged.updatedAt > cloud.updatedAt) {
-    const payload = { ...merged, updatedAt: Date.now() };
-    applyCloudData(payload);
-    await pushCloudSync(payload);
-  }
+  await pushCloudSyncMerged(buildLocalSnapshot());
 
   return merged;
 }
@@ -175,8 +200,25 @@ let pushTimer: ReturnType<typeof setTimeout> | null = null;
 export function scheduleCloudPush(getData: () => RodSyncData) {
   if (pushTimer) clearTimeout(pushTimer);
   pushTimer = setTimeout(() => {
+    pushTimer = null;
     const snapshot = getData();
-    const payload = { ...snapshot, updatedAt: Date.now() };
-    void pushCloudSync(payload);
+    void pushCloudSyncMerged({
+      todos: snapshot.todos,
+      ideas: snapshot.ideas,
+      journal: snapshot.journal ?? [],
+      updatedAt: snapshot.updatedAt,
+    });
   }, 700);
+}
+
+export function flushPendingCloudPush() {
+  if (pushTimer) {
+    clearTimeout(pushTimer);
+    pushTimer = null;
+  }
+  const snapshot = buildLocalSnapshot();
+  void pushCloudSyncMerged({
+    ...snapshot,
+    updatedAt: Date.now(),
+  });
 }

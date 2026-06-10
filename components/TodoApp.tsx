@@ -43,6 +43,10 @@ function createId() {
   return crypto.randomUUID();
 }
 
+function touchTodo(todo: Todo): Todo {
+  return { ...todo, updatedAt: Date.now() };
+}
+
 type Celebration = {
   message: string;
   emoji: string;
@@ -157,13 +161,15 @@ export default function TodoApp() {
 
     const maxOrder = todos.reduce((max, t) => Math.max(max, t.order), -1);
 
+    const now = Date.now();
     setTodos((prev) => [
       ...prev,
       {
         id: createId(),
         text,
         completed: false,
-        createdAt: Date.now(),
+        createdAt: now,
+        updatedAt: now,
         dueDate: dueDate || null,
         category,
         order: maxOrder + 1,
@@ -181,7 +187,7 @@ export default function TodoApp() {
       if (target.completed) {
         setTodos((prev) =>
           prev.map((t) =>
-            t.id === id ? uncompletePermanentTodo(t) : t,
+            t.id === id ? touchTodo(uncompletePermanentTodo(t)) : t,
           ),
         );
         return;
@@ -191,7 +197,7 @@ export default function TodoApp() {
       window.setTimeout(() => {
         setTodos((prev) =>
           prev.map((t) =>
-            t.id === id ? completePermanentTodo(t) : t,
+            t.id === id ? touchTodo(completePermanentTodo(t)) : t,
           ),
         );
         setCompletingId(null);
@@ -201,7 +207,7 @@ export default function TodoApp() {
 
     if (target.completed) {
       setTodos((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, completed: false } : t)),
+        prev.map((t) => (t.id === id ? touchTodo({ ...t, completed: false }) : t)),
       );
       return;
     }
@@ -210,7 +216,7 @@ export default function TodoApp() {
     window.setTimeout(() => {
       setTodos((prev) => {
         const next = prev.map((t) =>
-          t.id === id ? { ...t, completed: true } : t,
+          t.id === id ? touchTodo({ ...t, completed: true }) : t,
         );
         const remaining = remainingRegularCount(next);
         celebrate(remaining === 0);
@@ -231,7 +237,7 @@ export default function TodoApp() {
     if (!target || isPermanentTodo(target)) return;
 
     setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+      prev.map((t) => (t.id === id ? touchTodo({ ...t, ...updates }) : t)),
     );
   }
 

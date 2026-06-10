@@ -20,6 +20,8 @@ export function migrateTodos(data: unknown): Todo[] {
       completed: Boolean(raw.completed),
       createdAt:
         typeof raw.createdAt === "number" ? raw.createdAt : Date.now(),
+      updatedAt:
+        typeof raw.updatedAt === "number" ? raw.updatedAt : undefined,
       dueDate: typeof raw.dueDate === "string" ? raw.dueDate : null,
       category,
       order: typeof raw.order === "number" ? raw.order : index,
@@ -59,5 +61,10 @@ export function reorderTodos(todos: Todo[], activeId: string, overId: string) {
   const [moved] = next.splice(oldIndex, 1);
   next.splice(newIndex, 0, moved);
 
-  return next.map((todo, index) => ({ ...todo, order: index }));
+  const now = Date.now();
+  return next.map((todo, index) => ({
+    ...todo,
+    order: index,
+    updatedAt: todo.id === moved.id ? now : todo.updatedAt,
+  }));
 }

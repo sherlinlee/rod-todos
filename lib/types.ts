@@ -5,6 +5,7 @@ export type Todo = {
   text: string;
   completed: boolean;
   createdAt: number;
+  updatedAt?: number;
   dueDate: string | null;
   category: Category;
   order: number;

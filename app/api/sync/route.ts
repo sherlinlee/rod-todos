@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isRequestAuthenticated } from "@/lib/server/request-auth";
 import { loadSyncData, saveSyncData } from "@/lib/server/store";
+import { mergeSyncData } from "@/lib/sync-merge";
 import type { RodSyncData } from "@/lib/sync-types";
 import type { Idea } from "@/lib/ideas";
 import type { JournalEntry } from "@/lib/journal";
@@ -83,7 +84,11 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  const saved = await saveSyncData(parsed);
+  const existing = await loadSyncData();
+  const merged = existing ? mergeSyncData(parsed, existing) : parsed;
+  const payload = { ...merged, updatedAt: Date.now() };
+
+  const saved = await saveSyncData(payload);
   if (!saved) {
     return NextResponse.json(
       { ok: false, error: "storage_unavailable" },
@@ -91,5 +96,5 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true, data: parsed });
+  return NextResponse.json({ ok: true, data: payload });
 }
