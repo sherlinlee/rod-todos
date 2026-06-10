@@ -48,7 +48,7 @@ export default function JournalArchive({
   }
 
   return (
-    <section className="mt-3 rounded-[1.25rem] border border-white/10 bg-card/90 p-3 shadow-[0_12px_32px_var(--shadow)] backdrop-blur-sm sm:p-4">
+    <section className="mt-3 rounded-[1.25rem] border border-white/80 bg-card/90 p-3 shadow-[0_12px_32px_var(--shadow)] backdrop-blur-sm sm:p-4">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

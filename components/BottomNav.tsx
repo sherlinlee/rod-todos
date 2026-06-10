@@ -23,7 +23,7 @@ export default function BottomNav() {
               href={href}
               className={`flex flex-1 items-center justify-center gap-1 rounded-2xl py-2.5 text-xs font-bold transition active:scale-[0.98] sm:gap-1.5 sm:text-sm ${
                 active
-                  ? "bg-lavender/90 text-background shadow-sm"
+                  ? "bg-accent text-white shadow-sm"
                   : "text-foreground/50 hover:text-foreground/70"
               }`}
             >

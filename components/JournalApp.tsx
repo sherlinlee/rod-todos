@@ -219,7 +219,7 @@ export default function JournalApp() {
           </p>
         </header>
 
-        <section className="mb-3 rounded-[1.25rem] border border-white/10 bg-card/90 p-3 shadow-[0_16px_40px_var(--shadow)] backdrop-blur-sm sm:p-4">
+        <section className="mb-3 rounded-[1.25rem] border border-white/80 bg-card/90 p-3 shadow-[0_16px_40px_var(--shadow)] backdrop-blur-sm sm:p-4">
           <div className="mb-2 flex items-center gap-1.5">
             <CrossIcon size={12} />
             <p className="text-[10px] font-bold uppercase tracking-wide text-foreground/45">
@@ -236,7 +236,7 @@ export default function JournalApp() {
           </blockquote>
         </section>
 
-        <section className="rounded-[1.25rem] border border-white/10 bg-card/90 p-3 shadow-[0_16px_40px_var(--shadow)] backdrop-blur-sm sm:p-4">
+        <section className="rounded-[1.25rem] border border-white/80 bg-card/90 p-3 shadow-[0_16px_40px_var(--shadow)] backdrop-blur-sm sm:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <label
               htmlFor="journal-reflection"

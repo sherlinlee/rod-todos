@@ -129,7 +129,7 @@ export default function TodoItem({
           <span
             className={`flex h-6 w-6 items-center justify-center rounded-full border ${
               showChecked
-                ? "border-accent bg-accent text-foreground"
+                ? "border-accent bg-accent text-white"
                 : "border-accent-soft bg-input"
             } ${
               isChecking && !todo.completed
@@ -201,7 +201,7 @@ export default function TodoItem({
               <button
                 type="button"
                 onClick={saveEdit}
-                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-foreground"
+                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-white"
               >
                 Save
               </button>

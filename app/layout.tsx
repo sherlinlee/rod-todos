@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   description: "A bold little to-do app, just for Rod",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "rod's to-do(s)",
   },
 };
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0f1728",
+  themeColor: "#eaf4fc",
 };
 
 export default function RootLayout({

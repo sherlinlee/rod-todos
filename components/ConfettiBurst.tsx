@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-const COLORS = ["#c9935a", "#6a9fd4", "#5dd4a0", "#5eb89a", "#6899cc"];
+const COLORS = ["#1a3352", "#6bb8ff", "#8ee4c8", "#6ba3d9", "#2fa86f"];
 
 type ConfettiBurstProps = {
   seed: number;

@@ -92,7 +92,7 @@ export default function PinLogin() {
 
   return (
     <div className="safe-px safe-pt safe-pb mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-4">
-      <div className="w-full rounded-2xl border border-white/10 bg-card/90 p-6 text-center shadow-[0_12px_40px_var(--shadow)] backdrop-blur-sm sm:p-8">
+      <div className="w-full rounded-2xl border border-white/80 bg-card/90 p-6 text-center shadow-[0_12px_40px_var(--shadow)] backdrop-blur-sm sm:p-8">
         <div className="mb-5 flex flex-col items-center gap-2.5">
           <RodAvatar size={44} />
           <div>

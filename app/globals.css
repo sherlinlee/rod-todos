@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0f1728;
-  --foreground: #dce8f5;
-  --card: #1a2740;
-  --paper: #243652;
-  --kraft: #2f4568;
-  --forest: #5dd4a0;
-  --accent: #d4a574;
-  --accent-hover: #c49566;
-  --accent-soft: #7eb3e8;
-  --mint: #5eb89a;
-  --lavender: #7eb3e8;
-  --shadow: rgba(0, 0, 0, 0.42);
-  --input-bg: #2d4060;
-  --glow-accent: rgb(212 165 116 / 0.45);
-  --glow-soft: rgb(126 179 232 / 0.55);
+  --background: #eaf4fc;
+  --foreground: #1a3352;
+  --card: #ffffff;
+  --paper: #f5faff;
+  --kraft: #e3eef9;
+  --forest: #2fa86f;
+  --accent: #1a3352;
+  --accent-hover: #243f66;
+  --accent-soft: #6ba3d9;
+  --mint: #8ee4c8;
+  --lavender: #6bb8ff;
+  --shadow: rgba(26, 51, 82, 0.12);
+  --input-bg: #ffffff;
+  --glow-accent: rgb(26 51 82 / 0.3);
+  --glow-soft: rgb(107 184 255 / 0.55);
 }
 
 @theme inline {
@@ -80,17 +80,17 @@ body {
 }
 
 .paper-slip {
-  background: linear-gradient(145deg, var(--paper) 0%, #263a58 100%);
+  background: linear-gradient(145deg, var(--paper) 0%, #ffffff 100%);
   box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.06) inset,
-    0 4px 14px rgb(0 0 0 / 0.22);
+    0 1px 0 rgb(255 255 255 / 0.95) inset,
+    0 4px 14px rgb(26 51 82 / 0.08);
 }
 
 .paper-box {
-  background: linear-gradient(160deg, var(--kraft) 0%, #334868 100%);
+  background: linear-gradient(160deg, var(--kraft) 0%, #f0f6fd 100%);
   box-shadow:
-    0 2px 0 rgb(255 255 255 / 0.04) inset,
-    0 6px 16px rgb(0 0 0 / 0.2);
+    0 2px 0 rgb(255 255 255 / 0.8) inset,
+    0 6px 16px rgb(26 51 82 / 0.07);
 }
 
 .section-label {
@@ -98,17 +98,12 @@ body {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--accent-soft);
+  color: var(--accent);
 }
 
 .section-add {
   border-left: 3px solid var(--accent);
-  background: linear-gradient(
-    160deg,
-    rgb(212 165 116 / 0.1) 0%,
-    var(--paper) 45%,
-    var(--card) 100%
-  );
+  background: linear-gradient(160deg, #eef4fb 0%, var(--card) 100%);
 }
 
 .section-list {
@@ -118,17 +113,13 @@ body {
 
 .section-sky {
   border-left: 3px solid var(--lavender);
-  background: linear-gradient(
-    160deg,
-    rgb(126 179 232 / 0.12) 0%,
-    var(--card) 100%
-  );
+  background: linear-gradient(160deg, #eef6ff 0%, var(--card) 100%);
 }
 
 .filter-bar {
   border-radius: 0.75rem;
-  border: 1px solid rgb(126 179 232 / 0.18);
-  background: rgb(15 23 40 / 0.55);
+  border: 1px solid rgb(26 51 82 / 0.08);
+  background: var(--paper);
   padding: 0.625rem;
 }
 
@@ -231,7 +222,7 @@ body {
 
 @keyframes check-fill {
   0% {
-    background-color: var(--input-bg);
+    background-color: white;
     border-color: var(--accent-soft);
     transform: scale(1);
   }

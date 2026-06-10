@@ -48,7 +48,7 @@ export default function EssentialsStrip({
             <span
               className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] ${
                 todo.completed || isChecking
-                  ? "border-accent bg-accent text-foreground"
+                  ? "border-accent bg-accent text-white"
                   : "border-accent-soft/80 bg-input"
               } ${
                 isChecking && !todo.completed
