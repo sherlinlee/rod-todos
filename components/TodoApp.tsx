@@ -394,14 +394,14 @@ export default function TodoApp() {
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:mt-5">
             <div
-              className={`inline-flex max-w-full items-center gap-3 rounded-2xl border-2 px-4 py-2.5 shadow-[0_6px_22px_rgb(255_122_26_/_0.22)] backdrop-blur-sm ${
+              className={`inline-flex max-w-full items-center gap-2 rounded-xl border px-3 py-1.5 shadow-sm backdrop-blur-sm ${
                 activeCount === 0
-                  ? "border-forest/50 bg-gradient-to-r from-mint/50 via-white to-mint/30 ring-2 ring-mint/30"
-                  : "border-accent bg-gradient-to-r from-accent/20 via-accent-soft/45 to-accent/15 ring-2 ring-white/70"
+                  ? "border-forest/40 bg-mint/25"
+                  : "border-accent/40 bg-gradient-to-r from-accent/10 to-accent-soft/30"
               }`}
             >
               <span
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl shadow-md ${
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm ${
                   activeCount === 0
                     ? "bg-forest text-white"
                     : "animate-rod-bob bg-accent text-white"
@@ -410,27 +410,27 @@ export default function TodoApp() {
               >
                 {activeCount === 0 ? "✓" : "⚡"}
               </span>
-              <div className="min-w-0 text-left">
+              <p className="text-sm leading-tight">
                 {activeCount === 0 ? (
                   <>
-                    <p className="font-[family-name:var(--font-bangers)] text-xl leading-none tracking-wide text-forest">
+                    <span className="font-[family-name:var(--font-bangers)] text-lg tracking-wide text-forest">
                       All clear!
-                    </p>
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">
-                      Nice work, rod
-                    </p>
+                    </span>
+                    <span className="ml-1 text-xs font-semibold text-foreground/50">
+                      nice work
+                    </span>
                   </>
                 ) : (
                   <>
-                    <p className="font-[family-name:var(--font-bangers)] text-3xl leading-none tracking-wide text-accent">
+                    <span className="font-[family-name:var(--font-bangers)] text-xl tracking-wide text-accent">
                       {activeCount}
-                    </p>
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/55">
+                    </span>
+                    <span className="ml-1 text-xs font-bold uppercase tracking-wide text-foreground/60">
                       {activeCount === 1 ? "quest left" : "quests left"}
-                    </p>
+                    </span>
                   </>
                 )}
-              </div>
+              </p>
             </div>
 
             {ritualCount > 0 && (
