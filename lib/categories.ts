@@ -1,0 +1,34 @@
+import type { Category } from "./types";
+
+export const CATEGORIES: {
+  id: Category;
+  label: string;
+  boxLabel: string;
+  emoji: string;
+  pill: string;
+  boxActive: string;
+  boxIdle: string;
+}[] = [
+  {
+    id: "personal",
+    label: "Personal",
+    boxLabel: "Pink box",
+    emoji: "🌸",
+    pill: "bg-accent-soft/50 text-foreground",
+    boxActive: "border-accent bg-accent-soft/35 ring-4 ring-accent/15",
+    boxIdle: "border-accent-soft/70 bg-paper hover:border-accent/50",
+  },
+  {
+    id: "work",
+    label: "Work",
+    boxLabel: "Forest box",
+    emoji: "🌿",
+    pill: "bg-mint/60 text-foreground",
+    boxActive: "border-forest bg-mint/40 ring-4 ring-forest/20",
+    boxIdle: "border-mint bg-paper hover:border-forest/50",
+  },
+];
+
+export function getCategoryMeta(id: Category) {
+  return CATEGORIES.find((c) => c.id === id) ?? CATEGORIES[0];
+}

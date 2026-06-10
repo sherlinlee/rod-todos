@@ -1,0 +1,275 @@
+@import "tailwindcss";
+
+:root {
+  --background: #eaf6ff;
+  --foreground: #1a3a5c;
+  --card: #fffef8;
+  --paper: #fff9e6;
+  --kraft: #ffe4a8;
+  --forest: #2fa86f;
+  --accent: #ff7a1a;
+  --accent-soft: #ffd54f;
+  --mint: #8ee4c8;
+  --lavender: #6bb8ff;
+  --shadow: rgba(74, 159, 232, 0.28);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-paper: var(--paper);
+  --color-kraft: var(--kraft);
+  --color-forest: var(--forest);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-mint: var(--mint);
+  --color-lavender: var(--lavender);
+  --font-sans: var(--font-nunito);
+  --font-display: var(--font-bangers);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-nunito), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+.safe-px {
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+
+.safe-pt {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.safe-pb {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.scroll-chips {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scroll-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.touch-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.paper-slip {
+  background: linear-gradient(145deg, var(--paper) 0%, #fff4d6 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 4px 14px rgba(74, 159, 232, 0.14);
+}
+
+.paper-box {
+  background: linear-gradient(160deg, var(--kraft) 0%, #ffd98a 100%);
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.5) inset,
+    0 6px 16px rgba(26, 58, 92, 0.1);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(18px, -22px) scale(1.05);
+  }
+}
+
+@keyframes float-slower {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-24px, 16px) scale(1.08);
+  }
+}
+
+@keyframes float-gentle {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes rod-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(2deg);
+  }
+}
+
+@keyframes complete-fly {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1) rotate(0deg);
+  }
+  55% {
+    opacity: 1;
+    transform: translateX(8px) scale(1.04) rotate(2deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(36px) translateY(-28px) scale(0.82) rotate(-6deg);
+  }
+}
+
+@keyframes celebration-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes celebration-bounce {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  35% {
+    transform: scale(1.2) rotate(-8deg);
+  }
+  70% {
+    transform: scale(1.08) rotate(6deg);
+  }
+}
+
+@keyframes confetti {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(220px) rotate(540deg);
+  }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.25s ease-out;
+}
+
+.animate-wiggle:hover {
+  animation: wiggle 0.4s ease-in-out;
+}
+
+.animate-float-slow {
+  animation: float-slow 9s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: float-slower 12s ease-in-out infinite;
+}
+
+.animate-float-gentle {
+  animation: float-gentle  2.8s ease-in-out infinite;
+}
+
+.animate-rod-bob {
+  animation: rod-bob 3s ease-in-out infinite;
+}
+
+.animate-complete-fly {
+  animation: complete-fly 0.42s ease-in forwards;
+  pointer-events: none;
+}
+
+.animate-celebration-pop {
+  animation: celebration-pop 0.45s cubic-bezier(0.22, 1.12, 0.36, 1);
+}
+
+.animate-celebration-bounce {
+  animation: celebration-bounce 0.8s ease-in-out infinite;
+}
+
+.animate-confetti {
+  animation: confetti 1.4s ease-out forwards;
+}
+
+@keyframes shake-pin {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.shake-pin {
+  animation: shake-pin 0.35s ease-in-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
