@@ -393,15 +393,44 @@ export default function TodoApp() {
           </p>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:mt-5">
-            <div className="inline-flex max-w-full items-center gap-2.5 rounded-full border-2 border-accent-soft/50 bg-card/80 px-3.5 py-2 shadow-sm backdrop-blur-sm sm:gap-3 sm:px-4">
-              <span className="animate-rod-bob text-2xl" aria-hidden>
-                ⚡
+            <div
+              className={`inline-flex max-w-full items-center gap-3 rounded-2xl border-2 px-4 py-2.5 shadow-[0_6px_22px_rgb(255_122_26_/_0.22)] backdrop-blur-sm ${
+                activeCount === 0
+                  ? "border-forest/50 bg-gradient-to-r from-mint/50 via-white to-mint/30 ring-2 ring-mint/30"
+                  : "border-accent bg-gradient-to-r from-accent/20 via-accent-soft/45 to-accent/15 ring-2 ring-white/70"
+              }`}
+            >
+              <span
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl shadow-md ${
+                  activeCount === 0
+                    ? "bg-forest text-white"
+                    : "animate-rod-bob bg-accent text-white"
+                }`}
+                aria-hidden
+              >
+                {activeCount === 0 ? "✓" : "⚡"}
               </span>
-              <p className="text-xs font-semibold text-foreground/75 sm:text-sm">
-                {activeCount === 0
-                  ? "All done — nice work!"
-                  : `${activeCount} bit${activeCount === 1 ? "" : "s"} left`}
-              </p>
+              <div className="min-w-0 text-left">
+                {activeCount === 0 ? (
+                  <>
+                    <p className="font-[family-name:var(--font-bangers)] text-xl leading-none tracking-wide text-forest">
+                      All clear!
+                    </p>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/50">
+                      Nice work, rod
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-[family-name:var(--font-bangers)] text-3xl leading-none tracking-wide text-accent">
+                      {activeCount}
+                    </p>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-foreground/55">
+                      {activeCount === 1 ? "quest left" : "quests left"}
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
 
             {ritualCount > 0 && (
@@ -530,8 +559,8 @@ export default function TodoApp() {
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-accent-soft/40 pt-3.5 text-sm sm:mt-5 sm:pt-4">
               <span className="min-w-0 text-xs text-foreground/60 sm:text-sm">
                 {activeCount === 0
-                  ? "All done — you're amazing! 🎀"
-                  : `${activeCount} left to go`}
+                  ? "All quests cleared — you're amazing! 🎀"
+                  : `${activeCount} quest${activeCount === 1 ? "" : "s"} left`}
               </span>
               <button
                 type="button"
