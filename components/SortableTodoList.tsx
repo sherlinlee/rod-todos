@@ -63,6 +63,7 @@ export default function SortableTodoList({
               key={todo.id}
               todo={todo}
               isCompleting={completingId === todo.id}
+              isChecking={completingId === todo.id && !todo.completed}
               onToggle={onToggle}
               onDelete={onDelete}
               onUpdate={onUpdate}

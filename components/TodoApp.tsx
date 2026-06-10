@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AddTodoForm from "@/components/AddTodoForm";
 import CelebrationToast from "@/components/CelebrationToast";
+import CompletionFlash from "@/components/CompletionFlash";
 import ConfettiBurst from "@/components/ConfettiBurst";
 import EssentialsStrip from "@/components/EssentialsStrip";
 import SortableTodoList from "@/components/SortableTodoList";
@@ -13,6 +14,7 @@ import BottomNav from "@/components/BottomNav";
 import WeatherForecast from "@/components/WeatherForecast";
 import { CATEGORIES } from "@/lib/categories";
 import { allDoneEncouragement, pickEncouragement } from "@/lib/encouragements";
+import { hapticComplete } from "@/lib/haptics";
 import {
   allEssentialsDoneToday,
   completePermanentTodo,
@@ -54,7 +56,8 @@ function touchTodo(todo: Todo): Todo {
   return { ...todo, updatedAt: Date.now() };
 }
 
-const COMPLETE_ANIM_MS = 280;
+const CHECK_FEEDBACK_MS = 280;
+const COMPLETE_FLY_MS = 340;
 
 type Celebration = {
   message: string;
@@ -72,6 +75,10 @@ export default function TodoApp() {
   const [hydrated, setHydrated] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [celebration, setCelebration] = useState<Celebration | null>(null);
+  const [completionFlash, setCompletionFlash] = useState<{
+    message: string;
+    emoji: string;
+  } | null>(null);
   const lastToggleRef = useRef<{
     id: string;
     expectedCompleted: boolean;
@@ -178,17 +185,22 @@ export default function TodoApp() {
       if (categoryFilter !== "all" && todo.category !== categoryFilter) {
         return false;
       }
-      if (statusFilter === "active") return !todo.completed;
+      if (statusFilter === "active") {
+        return !todo.completed || completingId === todo.id;
+      }
       if (statusFilter === "completed") return todo.completed;
       return true;
     });
-  }, [regularTodos, statusFilter, categoryFilter]);
+  }, [regularTodos, statusFilter, categoryFilter, completingId]);
 
-  const activeCount = regularTodos.filter((t) => !t.completed).length;
+  const activeCount = regularTodos.filter(
+    (t) => !t.completed || completingId === t.id,
+  ).length;
   const completedCount = regularTodos.filter((t) => t.completed).length;
   const ritualCount = pendingRituals.length;
 
   const dismissCelebration = useCallback(() => setCelebration(null), []);
+  const dismissCompletionFlash = useCallback(() => setCompletionFlash(null), []);
 
   function remainingRegularCount(list: Todo[]) {
     return list.filter(isRegularTodo).filter((t) => !t.completed).length;
@@ -196,10 +208,14 @@ export default function TodoApp() {
 
   function celebrate(wasLastOne: boolean) {
     const picked = wasLastOne ? allDoneEncouragement() : pickEncouragement();
-    setCelebration({
-      ...picked,
-      seed: Date.now(),
-    });
+    if (wasLastOne) {
+      setCelebration({
+        ...picked,
+        seed: Date.now(),
+      });
+    } else {
+      setCompletionFlash(picked);
+    }
   }
 
   function addTodo(e: React.FormEvent) {
@@ -243,13 +259,15 @@ export default function TodoApp() {
 
       setCompletingId(id);
       lastToggleRef.current = { id, expectedCompleted: true, at: Date.now() };
-      setTodos((prev) => {
-        const next = prev.map((t) =>
-          t.id === id ? touchTodo(completePermanentTodo(t)) : t,
+      hapticComplete();
+      window.setTimeout(() => {
+        setTodos((prev) =>
+          prev.map((t) =>
+            t.id === id ? touchTodo(completePermanentTodo(t)) : t,
+          ),
         );
-        return next;
-      });
-      window.setTimeout(() => setCompletingId(null), COMPLETE_ANIM_MS);
+        window.setTimeout(() => setCompletingId(null), COMPLETE_FLY_MS);
+      }, CHECK_FEEDBACK_MS);
       return;
     }
 
@@ -262,15 +280,18 @@ export default function TodoApp() {
 
     setCompletingId(id);
     lastToggleRef.current = { id, expectedCompleted: true, at: Date.now() };
-    setTodos((prev) => {
-      const next = prev.map((t) =>
-        t.id === id ? touchTodo({ ...t, completed: true }) : t,
-      );
-      const remaining = remainingRegularCount(next);
-      celebrate(remaining === 0);
-      return next;
-    });
-    window.setTimeout(() => setCompletingId(null), COMPLETE_ANIM_MS);
+    hapticComplete();
+    window.setTimeout(() => {
+      setTodos((prev) => {
+        const next = prev.map((t) =>
+          t.id === id ? touchTodo({ ...t, completed: true }) : t,
+        );
+        const remaining = remainingRegularCount(next);
+        celebrate(remaining === 0);
+        return next;
+      });
+      window.setTimeout(() => setCompletingId(null), COMPLETE_FLY_MS);
+    }, CHECK_FEEDBACK_MS);
   }
 
   function deleteTodo(id: string) {
@@ -328,6 +349,14 @@ export default function TodoApp() {
             onDone={dismissCelebration}
           />
         </>
+      )}
+
+      {completionFlash && (
+        <CompletionFlash
+          message={completionFlash.message}
+          emoji={completionFlash.emoji}
+          onDone={dismissCompletionFlash}
+        />
       )}
 
       <main className="relative mx-auto w-full max-w-lg pb-2 pt-2 sm:pt-4">

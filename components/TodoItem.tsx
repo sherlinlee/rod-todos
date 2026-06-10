@@ -16,6 +16,7 @@ export type TodoUpdates = {
 type TodoItemProps = {
   todo: Todo;
   isCompleting: boolean;
+  isChecking: boolean;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdate: (id: string, updates: TodoUpdates) => void;
@@ -24,6 +25,7 @@ type TodoItemProps = {
 export default function TodoItem({
   todo,
   isCompleting,
+  isChecking,
   onToggle,
   onDelete,
   onUpdate,
@@ -77,6 +79,9 @@ export default function TodoItem({
     setEditing(false);
   }
 
+  const showChecked = todo.completed || isChecking;
+  const showFly = isCompleting && todo.completed;
+
   return (
     <li
       ref={setNodeRef}
@@ -87,7 +92,9 @@ export default function TodoItem({
           : editing
             ? "border-accent/50 ring-1 ring-accent/15"
             : "hover:border-accent/40"
-      } ${isCompleting ? "animate-complete-fly" : "animate-pop-in"}`}
+      } ${showFly ? "animate-complete-fly" : "animate-pop-in"} ${
+        isChecking ? "bg-accent/[0.06]" : ""
+      }`}
     >
       <div className="flex items-start gap-1.5">
         <button
@@ -120,14 +127,26 @@ export default function TodoItem({
           className="tap-pad flex shrink-0 items-center justify-center disabled:opacity-40"
         >
           <span
-            className={`flex h-6 w-6 items-center justify-center rounded-full border transition active:scale-95 ${
-              todo.completed
+            className={`flex h-6 w-6 items-center justify-center rounded-full border ${
+              showChecked
                 ? "border-accent bg-accent text-white"
                 : "border-accent-soft bg-white"
+            } ${
+              isChecking && !todo.completed
+                ? "animate-check-fill"
+                : isChecking
+                  ? "animate-check-pop"
+                  : "transition active:scale-95"
             }`}
           >
-            {todo.completed && (
-              <span className="text-[10px] leading-none">✓</span>
+            {showChecked && (
+              <span
+                className={`text-[10px] leading-none ${
+                  isChecking ? "animate-check-mark-pop" : ""
+                }`}
+              >
+                ✓
+              </span>
             )}
           </span>
         </button>
@@ -199,10 +218,10 @@ export default function TodoItem({
           <div className="min-w-0 flex-1 py-0.5">
             <p
               className={`break-words text-sm leading-snug ${
-                todo.completed
+                showChecked
                   ? "text-foreground/40 line-through decoration-accent-soft"
                   : "text-foreground"
-              }`}
+              } ${isChecking ? "animate-strike-sweep" : ""}`}
             >
               {todo.text}
             </p>
