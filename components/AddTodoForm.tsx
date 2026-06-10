@@ -31,12 +31,12 @@ export default function AddTodoForm({
           value={input}
           onChange={(e) => onInputChange(e.target.value)}
           placeholder="Add a task…"
-          className="paper-slip min-h-[52px] min-w-0 flex-1 rounded-xl border border-accent-soft/60 px-4 py-3.5 text-base text-foreground outline-none transition placeholder:text-sm placeholder:text-foreground/35 focus:border-accent focus:ring-2 focus:ring-accent/15 sm:min-h-[48px] sm:py-3"
+          className="paper-slip min-h-14 min-w-0 flex-1 rounded-xl border border-accent-soft/60 px-4 py-3.5 text-base text-foreground outline-none transition placeholder:text-sm placeholder:text-foreground/35 focus:border-accent focus:ring-2 focus:ring-accent/15 sm:min-h-[3.25rem] sm:py-3"
           aria-label="New to-do"
         />
         <button
           type="submit"
-          className="animate-wiggle min-h-[52px] shrink-0 rounded-xl bg-accent px-5 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-[#e86a10] active:scale-95 sm:min-h-[48px] sm:py-3"
+          className="animate-wiggle min-h-14 shrink-0 rounded-xl bg-accent px-5 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-[#e86a10] active:scale-95 sm:min-h-[3.25rem] sm:py-3"
         >
           Add
         </button>
@@ -46,7 +46,7 @@ export default function AddTodoForm({
         <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-foreground/45">
           Sort into a box
         </p>
-        <div className="grid grid-cols-2 gap-1">
+        <div className="grid grid-cols-2 gap-1.5">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
@@ -56,15 +56,10 @@ export default function AddTodoForm({
                 category === cat.id ? cat.boxActive : cat.boxIdle
               }`}
             >
-              <span className="text-sm leading-none">{cat.emoji}</span>
-              <div className="min-w-0">
-                <span className="block truncate text-[11px] font-bold leading-tight text-foreground">
-                  {cat.boxLabel}
-                </span>
-                <span className="text-[9px] leading-tight text-foreground/45">
-                  {cat.label}
-                </span>
-              </div>
+              <span className="shrink-0 text-sm leading-none">{cat.emoji}</span>
+              <span className="min-w-0 truncate text-[11px] font-bold leading-tight text-foreground">
+                {cat.boxLabel}
+              </span>
             </button>
           ))}
         </div>
