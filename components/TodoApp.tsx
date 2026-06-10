@@ -393,55 +393,26 @@ export default function TodoApp() {
           </p>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:mt-5">
-            <div
-              className={`inline-flex max-w-full items-center gap-2 rounded-xl border px-3 py-1.5 shadow-sm backdrop-blur-sm ${
-                activeCount === 0
-                  ? "border-forest/40 bg-mint/25"
-                  : "border-accent/40 bg-gradient-to-r from-accent/10 to-accent-soft/30"
-              }`}
-            >
-              <span
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm ${
-                  activeCount === 0
-                    ? "bg-forest text-white"
-                    : "animate-rod-bob bg-accent text-white"
-                }`}
-                aria-hidden
-              >
+            <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-accent-soft/50 bg-card/90 px-3.5 py-2 text-xs font-semibold text-foreground/75 shadow-sm backdrop-blur-sm sm:px-4 sm:text-sm">
+              <span className="text-lg leading-none" aria-hidden>
                 {activeCount === 0 ? "✓" : "⚡"}
               </span>
-              <p className="text-sm leading-tight">
-                {activeCount === 0 ? (
-                  <>
-                    <span className="font-[family-name:var(--font-bangers)] text-lg tracking-wide text-forest">
-                      All clear!
-                    </span>
-                    <span className="ml-1 text-xs font-semibold text-foreground/50">
-                      nice work
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="font-[family-name:var(--font-bangers)] text-xl tracking-wide text-accent">
-                      {activeCount}
-                    </span>
-                    <span className="ml-1 text-xs font-bold uppercase tracking-wide text-foreground/60">
-                      {activeCount === 1 ? "quest left" : "quests left"}
-                    </span>
-                  </>
-                )}
+              <p>
+                {activeCount === 0
+                  ? "All clear — nice work!"
+                  : `${activeCount} quest${activeCount === 1 ? "" : "s"} left`}
               </p>
             </div>
 
             {ritualCount > 0 && (
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/40 bg-background/80 px-3 py-1.5 text-[11px] font-semibold text-foreground/55">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/40 bg-background/80 px-3.5 py-2 text-xs font-semibold text-foreground/55">
                 <span aria-hidden>⭐</span>
                 {ritualCount} ritual{ritualCount === 1 ? "" : "s"}
               </div>
             )}
 
             {ritualsDone && ritualCount === 0 && (
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/30 bg-background/60 px-3 py-1.5 text-[11px] font-semibold text-foreground/45">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/30 bg-background/60 px-3.5 py-2 text-xs font-semibold text-foreground/45">
                 rituals done ✓
               </div>
             )}
