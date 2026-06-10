@@ -8,6 +8,7 @@ import EssentialsStrip from "@/components/EssentialsStrip";
 import SortableTodoList from "@/components/SortableTodoList";
 import type { TodoUpdates } from "@/components/TodoItem";
 import RodAvatar from "@/components/RodAvatar";
+import RodCelebrationAvatar from "@/components/RodCelebrationAvatar";
 import BottomNav from "@/components/BottomNav";
 import WeatherForecast from "@/components/WeatherForecast";
 import { CATEGORIES } from "@/lib/categories";
@@ -379,7 +380,15 @@ export default function TodoApp() {
             <p className="py-10 text-center text-foreground/50">Loading…</p>
           ) : filteredTodos.length === 0 ? (
             <div className="rounded-2xl bg-background/70 px-3 py-10 text-center sm:px-4 sm:py-12">
-              <p className="animate-float-gentle text-3xl">🌷</p>
+              {statusFilter === "active" ? (
+                <div className="flex justify-center">
+                  <RodCelebrationAvatar size={76} />
+                </div>
+              ) : (
+                <p className="animate-float-gentle text-3xl">
+                  {statusFilter === "completed" ? "💪" : "📋"}
+                </p>
+              )}
               <p className="mt-3 text-sm font-semibold leading-relaxed text-foreground/80 sm:text-base">
                 {statusFilter === "completed"
                   ? "Nothing checked off yet — you've got this!"

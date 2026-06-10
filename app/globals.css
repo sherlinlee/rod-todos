@@ -190,6 +190,26 @@ body {
   }
 }
 
+@keyframes celebration-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+}
+
+@keyframes trophy-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 @keyframes confetti {
   0% {
     opacity: 1;
@@ -236,6 +256,15 @@ body {
 
 .animate-celebration-bounce {
   animation: celebration-bounce 0.8s ease-in-out infinite;
+}
+
+.animate-celebration-float {
+  animation: celebration-float 2.4s ease-in-out infinite;
+}
+
+.animate-trophy-float {
+  animation: trophy-float 1.8s ease-in-out infinite;
+  transform-origin: 40px 18px;
 }
 
 .animate-confetti {
