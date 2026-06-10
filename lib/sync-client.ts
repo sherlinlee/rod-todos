@@ -7,7 +7,6 @@ import {
   mergeSyncData,
   needsCloudPush,
 } from "@/lib/sync-merge";
-import { debugLog } from "@/lib/debug-log";
 import {
   type RodSyncData,
   SYNC_META_KEY,
@@ -178,30 +177,13 @@ async function pushCloudSyncMerged(local: RodSyncData): Promise<boolean> {
     }
 
     const merged = mergeSyncData(localWithRevision, cloud);
-    // #region agent log
-    debugLog("H2", "sync-client.ts:pushCloudSyncMerged", "merge before push", {
-      localCompleted: localWithRevision.todos.filter((t) => t.completed).length,
-      cloudCompleted: cloud.todos.filter((t) => t.completed).length,
-      mergedCompleted: merged.todos.filter((t) => t.completed).length,
-      localUpdatedAt: localWithRevision.updatedAt,
-      cloudUpdatedAt: cloud.updatedAt,
-      willPush: needsCloudPush(merged, cloud),
-    }, "post-fix");
-    // #endregion
 
     if (!needsCloudPush(merged, cloud)) {
       return true;
     }
 
     const payload = { ...merged, updatedAt: Date.now() };
-    const pushed = await pushCloudSync(payload);
-    // #region agent log
-    debugLog("H2", "sync-client.ts:pushCloudSyncMerged", "push finished", {
-      pushed,
-      payloadCompleted: payload.todos.filter((t) => t.completed).length,
-    }, "post-fix");
-    // #endregion
-    return pushed;
+    return pushCloudSync(payload);
   });
 
   return pushChain;
@@ -245,17 +227,7 @@ export async function hydrateFromCloud(): Promise<RodSyncData> {
 }
 
 export async function refreshFromCloud(): Promise<RodSyncData | null> {
-  const cloud = await fetchCloudSync();
-  if (!cloud) return null;
-
-  // #region agent log
-  debugLog("H5", "sync-client.ts:refreshFromCloud", "poll fetched cloud only", {
-    cloudCompleted: cloud.todos.filter((t) => t.completed).length,
-    cloudUpdatedAt: cloud.updatedAt,
-  }, "post-fix");
-  // #endregion
-
-  return cloud;
+  return fetchCloudSync();
 }
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;

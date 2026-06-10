@@ -81,7 +81,7 @@ export default function TodoItem({
     <li
       ref={setNodeRef}
       style={style}
-      className={`paper-slip group relative flex flex-col gap-1.5 rounded-xl border border-accent-soft/45 px-2 py-2 transition ${
+      className={`paper-slip group relative flex flex-col gap-1.5 rounded-xl border border-accent-soft/45 px-2 py-2.5 transition sm:py-2 ${
         isDragging
           ? "z-10 scale-[1.01] shadow-md ring-2 ring-accent/25"
           : editing
@@ -89,11 +89,11 @@ export default function TodoItem({
             : "hover:border-accent/40"
       } ${isCompleting ? "animate-complete-fly" : "animate-pop-in"}`}
     >
-      <div className="flex items-start gap-1.5">
+      <div className="flex items-start gap-2">
         <button
           type="button"
           disabled={editing}
-          className="flex h-7 w-5 shrink-0 cursor-grab touch-none items-center justify-center text-foreground/20 transition hover:text-accent active:cursor-grabbing disabled:opacity-30"
+          className="flex h-11 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-foreground/20 transition hover:text-accent active:cursor-grabbing disabled:opacity-30 sm:h-7 sm:w-5"
           aria-label={`Drag to reorder ${todo.text}`}
           {...attributes}
           {...listeners}
@@ -117,14 +117,14 @@ export default function TodoItem({
               ? `Mark "${todo.text}" as incomplete`
               : `Mark "${todo.text}" as complete`
           }
-          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition disabled:opacity-40 ${
+          className={`touch-target flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 transition disabled:opacity-40 sm:h-6 sm:w-6 sm:border ${
             todo.completed
               ? "border-accent bg-accent text-white"
-              : "border-accent-soft bg-white active:scale-95"
+              : "border-accent bg-white active:scale-95"
           }`}
         >
           {todo.completed && (
-            <span className="text-[10px] leading-none">✓</span>
+            <span className="text-sm leading-none sm:text-[10px]">✓</span>
           )}
         </button>
 
@@ -192,29 +192,25 @@ export default function TodoItem({
             </div>
           </div>
         ) : (
-          <div className="min-w-0 flex-1">
-            <button type="button" onClick={startEdit} className="w-full text-left">
-              <span
-                className={`block break-words text-sm leading-snug ${
-                  todo.completed
-                    ? "text-foreground/40 line-through decoration-accent-soft"
-                    : "text-foreground"
-                }`}
-              >
-                {todo.text}
-              </span>
-            </button>
+          <div className="min-w-0 flex-1 py-0.5">
+            <p
+              className={`break-words text-sm leading-snug ${
+                todo.completed
+                  ? "text-foreground/40 line-through decoration-accent-soft"
+                  : "text-foreground"
+              }`}
+            >
+              {todo.text}
+            </p>
 
-            <div className="mt-1 flex flex-wrap items-center gap-1">
+            <div className="mt-1.5 flex flex-wrap items-center gap-1">
               <span
                 className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${category.pill}`}
               >
                 {category.emoji} {category.boxLabel}
               </span>
 
-              <button
-                type="button"
-                onClick={startEdit}
+              <span
                 className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                   due
                     ? due.tone === "overdue"
@@ -227,19 +223,19 @@ export default function TodoItem({
                     : "bg-lavender/40 text-foreground/50"
                 }`}
               >
-                📅 {due ? due.label : "Add date"}
-              </button>
+                📅 {due ? due.label : "No date"}
+              </span>
             </div>
           </div>
         )}
 
         {!editing && (
-          <div className="flex shrink-0">
+          <div className="flex shrink-0 flex-col gap-0.5 sm:flex-row sm:gap-0">
             <button
               type="button"
               onClick={startEdit}
               aria-label={`Edit "${todo.text}"`}
-              className="rounded-lg px-1.5 text-xs text-foreground/30 active:text-accent sm:opacity-0 sm:group-hover:opacity-100"
+              className="touch-target flex h-11 w-11 items-center justify-center rounded-xl text-lg text-foreground/45 active:bg-accent-soft/25 active:text-accent sm:h-8 sm:w-8 sm:text-xs sm:opacity-0 sm:group-hover:opacity-100"
             >
               ✎
             </button>
@@ -247,7 +243,7 @@ export default function TodoItem({
               type="button"
               onClick={() => onDelete(todo.id)}
               aria-label={`Delete "${todo.text}"`}
-              className="rounded-lg px-1.5 text-xs text-foreground/30 active:text-accent sm:opacity-0 sm:group-hover:opacity-100"
+              className="touch-target flex h-11 w-11 items-center justify-center rounded-xl text-lg text-foreground/45 active:bg-accent-soft/25 active:text-accent sm:h-8 sm:w-8 sm:text-xs sm:opacity-0 sm:group-hover:opacity-100"
             >
               ✕
             </button>

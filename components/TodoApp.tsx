@@ -24,7 +24,6 @@ import {
 } from "@/lib/essentials";
 import { migrateTodos, reorderTodos, sortByDueDate } from "@/lib/migrate";
 import { mergeSyncData } from "@/lib/sync-merge";
-import { debugLog } from "@/lib/debug-log";
 import { useCloudRefresh } from "@/hooks/useCloudRefresh";
 import {
   hydrateFromCloud,
@@ -54,6 +53,8 @@ function createId() {
 function touchTodo(todo: Todo): Todo {
   return { ...todo, updatedAt: Date.now() };
 }
+
+const COMPLETE_ANIM_MS = 280;
 
 type Celebration = {
   message: string;
@@ -124,45 +125,12 @@ export default function TodoApp() {
       const mergedTodo = last
         ? merged.todos.find((t) => t.id === last.id)
         : undefined;
-      const cloudTodo = last
-        ? cloud.todos.find((t) => t.id === last.id)
-        : undefined;
-      // #region agent log
-      debugLog(
-        "H1",
-        "TodoApp.tsx:onCloudRefresh",
-        "cloud refresh merged with react state",
-        {
-          lastToggleId: last?.id ?? null,
-          expectedCompleted: last?.expectedCompleted ?? null,
-          msSinceToggle: last ? Date.now() - last.at : null,
-          reactCompleted: localTodo?.completed ?? null,
-          cloudCompleted: cloudTodo?.completed ?? null,
-          mergedCompleted: mergedTodo?.completed ?? null,
-          willRevert:
-            last != null &&
-            localTodo?.completed === last.expectedCompleted &&
-            mergedTodo?.completed !== last.expectedCompleted,
-          activeFilter: statusFilter,
-        },
-        "post-fix",
-      );
-      // #endregion
       if (
         last != null &&
         Date.now() - last.at < 3000 &&
         localTodo?.completed === last.expectedCompleted &&
         mergedTodo?.completed !== last.expectedCompleted
       ) {
-        // #region agent log
-        debugLog(
-          "H1",
-          "TodoApp.tsx:onCloudRefresh",
-          "skipped revert during recent toggle",
-          { lastToggleId: last.id },
-          "post-fix",
-        );
-        // #endregion
         return;
       }
       setTodos(merged.todos);
@@ -279,15 +247,9 @@ export default function TodoApp() {
         const next = prev.map((t) =>
           t.id === id ? touchTodo(completePermanentTodo(t)) : t,
         );
-        // #region agent log
-        debugLog("H3", "TodoApp.tsx:toggleTodo", "ritual complete applied immediately", {
-          id,
-          completed: true,
-        }, "post-fix");
-        // #endregion
         return next;
       });
-      window.setTimeout(() => setCompletingId(null), 420);
+      window.setTimeout(() => setCompletingId(null), COMPLETE_ANIM_MS);
       return;
     }
 
@@ -306,16 +268,9 @@ export default function TodoApp() {
       );
       const remaining = remainingRegularCount(next);
       celebrate(remaining === 0);
-      // #region agent log
-      debugLog("H3", "TodoApp.tsx:toggleTodo", "complete applied immediately", {
-        id,
-        completed: true,
-        remainingActive: remaining,
-      }, "post-fix");
-      // #endregion
       return next;
     });
-    window.setTimeout(() => setCompletingId(null), 420);
+    window.setTimeout(() => setCompletingId(null), COMPLETE_ANIM_MS);
   }
 
   function deleteTodo(id: string) {
