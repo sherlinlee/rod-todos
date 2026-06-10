@@ -30,6 +30,7 @@ import { useCloudRefresh } from "@/hooks/useCloudRefresh";
 import {
   hydrateFromCloud,
   buildLocalSnapshot,
+  readLocalTodos,
   readLocalIdeas,
   readLocalJournal,
   readLocalTombstones,
@@ -71,6 +72,7 @@ type Celebration = {
 
 export default function TodoApp() {
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [bootstrapped, setBootstrapped] = useState(false);
   const [input, setInput] = useState("");
   const [category, setCategory] = useState<Category>("personal");
   const [dueDate, setDueDate] = useState("");
@@ -94,6 +96,13 @@ export default function TodoApp() {
   useEffect(() => {
     todosRef.current = todos;
   }, [todos]);
+
+  useLayoutEffect(() => {
+    const local = readLocalTodos();
+    todosRef.current = local;
+    setTodos(local);
+    setBootstrapped(true);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -393,28 +402,32 @@ export default function TodoApp() {
           </p>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:mt-5">
-            <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-accent-soft/50 bg-card/90 px-3.5 py-2 text-xs font-semibold text-foreground/75 shadow-sm backdrop-blur-sm sm:px-4 sm:text-sm">
-              <span className="text-lg leading-none" aria-hidden>
-                {activeCount === 0 ? "✓" : "⚡"}
-              </span>
-              <p>
-                {activeCount === 0
-                  ? "All clear — nice work!"
-                  : `${activeCount} quest${activeCount === 1 ? "" : "s"} left`}
-              </p>
-            </div>
+            {bootstrapped && (
+              <>
+                <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-accent-soft/50 bg-card/90 px-3.5 py-2 text-xs font-semibold text-foreground/75 shadow-sm backdrop-blur-sm sm:px-4 sm:text-sm">
+                  <span className="text-lg leading-none" aria-hidden>
+                    {activeCount === 0 ? "✓" : "⚡"}
+                  </span>
+                  <p>
+                    {activeCount === 0
+                      ? "All clear — nice work!"
+                      : `${activeCount} quest${activeCount === 1 ? "" : "s"} left`}
+                  </p>
+                </div>
 
-            {ritualCount > 0 && (
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/40 bg-background/80 px-3.5 py-2 text-xs font-semibold text-foreground/55">
-                <span aria-hidden>⭐</span>
-                {ritualCount} ritual{ritualCount === 1 ? "" : "s"}
-              </div>
-            )}
+                {ritualCount > 0 && (
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/40 bg-background/80 px-3.5 py-2 text-xs font-semibold text-foreground/55">
+                    <span aria-hidden>⭐</span>
+                    {ritualCount} ritual{ritualCount === 1 ? "" : "s"}
+                  </div>
+                )}
 
-            {ritualsDone && ritualCount === 0 && (
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/30 bg-background/60 px-3.5 py-2 text-xs font-semibold text-foreground/45">
-                rituals done ✓
-              </div>
+                {ritualsDone && ritualCount === 0 && (
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/30 bg-background/60 px-3.5 py-2 text-xs font-semibold text-foreground/45">
+                    rituals done ✓
+                  </div>
+                )}
+              </>
             )}
           </div>
         </header>
