@@ -55,7 +55,7 @@ export default function AddTodoForm({
 
       <button
         type="submit"
-        className="w-full rounded-xl bg-accent py-2.5 font-extrabold tracking-wide text-white shadow-[0_3px_12px_var(--shadow)] transition hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
+        className="w-full rounded-lg bg-accent px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
         disabled={!input.trim()}
       >
         Add to list
