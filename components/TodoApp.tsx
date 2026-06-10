@@ -441,7 +441,8 @@ export default function TodoApp() {
           <WeatherForecast />
         </div>
 
-        <section className="rounded-2xl border border-white/10 bg-card/90 p-3 shadow-[0_12px_40px_var(--shadow)] backdrop-blur-sm sm:p-4">
+        <section className="section-add mb-4 rounded-2xl border border-accent/20 p-3.5 shadow-[0_8px_28px_var(--shadow)] sm:p-4">
+          <p className="section-label mb-3">✏️ New task</p>
           <AddTodoForm
             input={input}
             category={category}
@@ -451,10 +452,16 @@ export default function TodoApp() {
             onDueDateChange={setDueDate}
             onSubmit={addTodo}
           />
+        </section>
 
-          <div className="my-4 border-t border-accent-soft/40 sm:my-5" />
+        <section className="section-list rounded-2xl border border-accent-soft/20 p-3.5 shadow-[0_8px_28px_var(--shadow)] sm:p-4">
+          <p className="section-label mb-3">📋 Your quests</p>
 
-          <div className="scroll-chips -mx-0.5 mb-3 flex gap-2 overflow-x-auto pb-0.5 sm:mb-4 sm:flex-wrap sm:overflow-visible">
+          <div className="filter-bar mb-3 space-y-2 sm:mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-foreground/40">
+              Status
+            </p>
+            <div className="scroll-chips -mx-0.5 flex gap-2 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible">
             {filterButtons.map(({ key, label, count }) => (
               <button
                 key={key}
@@ -462,8 +469,8 @@ export default function TodoApp() {
                 onClick={() => setStatusFilter(key)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-95 sm:text-sm ${
                   statusFilter === key
-                    ? "bg-lavender text-foreground shadow-sm"
-                    : "bg-background text-foreground/60 active:bg-accent-soft/30"
+                    ? "bg-lavender text-background shadow-sm"
+                    : "bg-input text-foreground/65 active:bg-accent-soft/20"
                 }`}
               >
                 {label}
@@ -472,16 +479,19 @@ export default function TodoApp() {
                 )}
               </button>
             ))}
-          </div>
+            </div>
 
-          <div className="scroll-chips -mx-0.5 mb-3 flex gap-2 overflow-x-auto pb-0.5 sm:mb-4 sm:flex-wrap sm:overflow-visible">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-foreground/40">
+              Box
+            </p>
+            <div className="scroll-chips -mx-0.5 flex gap-2 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible">
             <button
               type="button"
               onClick={() => setCategoryFilter("all")}
               className={`shrink-0 rounded-full px-3 py-2 text-xs font-bold transition active:scale-95 ${
                 categoryFilter === "all"
-                  ? "bg-kraft text-foreground shadow-sm"
-                  : "bg-background text-foreground/55 active:bg-kraft/60"
+                  ? "bg-kraft text-foreground shadow-sm ring-1 ring-accent-soft/30"
+                  : "bg-input text-foreground/60 active:bg-kraft/60"
               }`}
             >
               📦 All boxes
@@ -493,19 +503,20 @@ export default function TodoApp() {
                 onClick={() => setCategoryFilter(cat.id)}
                 className={`shrink-0 rounded-full px-3 py-2 text-xs font-bold transition active:scale-95 ${
                   categoryFilter === cat.id
-                    ? `${cat.pill} ring-2 ring-white`
-                    : "bg-background text-foreground/55 active:bg-accent-soft/25"
+                    ? `${cat.pill} ring-1 ring-accent-soft/40`
+                    : "bg-input text-foreground/60 active:bg-accent-soft/15"
                 }`}
               >
                 {cat.emoji} {cat.boxLabel}
               </button>
             ))}
+            </div>
           </div>
 
           {!hydrated ? (
             <p className="py-10 text-center text-foreground/50">Loading…</p>
           ) : filteredTodos.length === 0 ? (
-            <div className="rounded-2xl bg-background/70 px-3 py-10 text-center sm:px-4 sm:py-12">
+            <div className="rounded-xl border border-accent-soft/15 bg-input/40 px-3 py-10 text-center sm:px-4 sm:py-12">
               {statusFilter === "active" ? (
                 <div className="flex justify-center">
                   <RodCelebrationAvatar size={100} />
@@ -535,7 +546,7 @@ export default function TodoApp() {
           )}
 
           {hydrated && pendingRituals.length > 0 && (
-            <div className="mt-4 border-t border-accent-soft/30 pt-3">
+            <div className="mt-4 rounded-xl border border-accent-soft/15 bg-input/30 p-2.5 pt-3">
               <EssentialsStrip
                 todos={pendingRituals}
                 completingId={completingId}

@@ -57,7 +57,7 @@ export default function WeatherForecast() {
 
   if (state.status === "loading") {
     return (
-      <div className="rounded-xl bg-lavender/25 px-3 py-2 text-center text-xs font-semibold text-foreground/45">
+      <div className="rounded-xl section-sky px-3 py-2 text-center text-xs font-semibold text-foreground/45">
         Checking the skies…
       </div>
     );
@@ -65,14 +65,14 @@ export default function WeatherForecast() {
 
   if (state.status === "error") {
     return (
-      <div className="rounded-xl bg-lavender/25 px-3 py-2 text-center text-xs font-semibold text-foreground/45">
+      <div className="rounded-xl section-sky px-3 py-2 text-center text-xs font-semibold text-foreground/45">
         Weather is taking a little nap
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-accent-soft/35 bg-card/80 p-2.5 shadow-sm backdrop-blur-sm sm:p-3">
+    <div className="rounded-xl border border-accent-soft/25 section-sky p-2.5 shadow-sm backdrop-blur-sm sm:p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <p className="text-xs font-bold text-foreground/65">🌤️ Weather</p>
         <p className="min-w-0 truncate text-[10px] font-semibold text-foreground/40">

@@ -3,19 +3,19 @@
 :root {
   --background: #0f1728;
   --foreground: #dce8f5;
-  --card: #182338;
-  --paper: #1f2d45;
-  --kraft: #2a3a55;
+  --card: #1a2740;
+  --paper: #243652;
+  --kraft: #2f4568;
   --forest: #5dd4a0;
-  --accent: #c9935a;
-  --accent-hover: #b8834f;
-  --accent-soft: #6a9fd4;
+  --accent: #d4a574;
+  --accent-hover: #c49566;
+  --accent-soft: #7eb3e8;
   --mint: #5eb89a;
-  --lavender: #6899cc;
-  --shadow: rgba(0, 0, 0, 0.38);
-  --input-bg: #243248;
-  --glow-accent: rgb(201 147 90 / 0.45);
-  --glow-soft: rgb(106 159 212 / 0.55);
+  --lavender: #7eb3e8;
+  --shadow: rgba(0, 0, 0, 0.42);
+  --input-bg: #2d4060;
+  --glow-accent: rgb(212 165 116 / 0.45);
+  --glow-soft: rgb(126 179 232 / 0.55);
 }
 
 @theme inline {
@@ -91,6 +91,45 @@ body {
   box-shadow:
     0 2px 0 rgb(255 255 255 / 0.04) inset,
     0 6px 16px rgb(0 0 0 / 0.2);
+}
+
+.section-label {
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-soft);
+}
+
+.section-add {
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(
+    160deg,
+    rgb(212 165 116 / 0.1) 0%,
+    var(--paper) 45%,
+    var(--card) 100%
+  );
+}
+
+.section-list {
+  border-left: 3px solid var(--accent-soft);
+  background: var(--card);
+}
+
+.section-sky {
+  border-left: 3px solid var(--lavender);
+  background: linear-gradient(
+    160deg,
+    rgb(126 179 232 / 0.12) 0%,
+    var(--card) 100%
+  );
+}
+
+.filter-bar {
+  border-radius: 0.75rem;
+  border: 1px solid rgb(126 179 232 / 0.18);
+  background: rgb(15 23 40 / 0.55);
+  padding: 0.625rem;
 }
 
 @keyframes pop-in {
