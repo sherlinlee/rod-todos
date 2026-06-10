@@ -11,12 +11,14 @@ import {
   type RodSyncData,
   SYNC_META_KEY,
   type SyncMeta,
+  type SyncTombstone,
 } from "@/lib/sync-types";
 import type { Todo } from "@/lib/types";
 
 const TODOS_KEY = "to-dos-items-v2";
 const LEGACY_TODOS_KEY = "to-dos-items";
 const IDEAS_KEY = "to-dos-ideas";
+const TOMBSTONES_KEY = "rod-sync-tombstones";
 
 export function readLocalTodos(): Todo[] {
   try {
@@ -59,6 +61,46 @@ export function writeLocalJournal(journal: JournalEntry[]) {
   saveJournal(journal);
 }
 
+export function readLocalTombstones(): SyncTombstone[] {
+  try {
+    const raw = localStorage.getItem(TOMBSTONES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as SyncTombstone[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (t) => typeof t.key === "string" && typeof t.deletedAt === "number",
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function writeLocalTombstones(tombstones: SyncTombstone[]) {
+  localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(tombstones));
+}
+
+export function recordTombstone(key: string) {
+  const deletedAt = Date.now();
+  const next = [
+    ...readLocalTombstones().filter((t) => t.key !== key),
+    { key, deletedAt },
+  ];
+  writeLocalTombstones(next);
+  writeSyncMeta({ updatedAt: deletedAt });
+}
+
+export function todoTombstoneKey(id: string) {
+  return `todo:${id}`;
+}
+
+export function ideaTombstoneKey(id: string) {
+  return `idea:${id}`;
+}
+
+export function journalTombstoneKey(date: string) {
+  return `journal:${date}`;
+}
+
 function readSyncMeta(): SyncMeta {
   try {
     const raw = localStorage.getItem(SYNC_META_KEY);
@@ -92,6 +134,7 @@ export async function fetchCloudSync(): Promise<RodSyncData | null> {
       todos: ensureEssentials(migrateTodos(json.data.todos)),
       ideas: json.data.ideas,
       journal: json.data.journal ?? [],
+      tombstones: json.data.tombstones ?? [],
       updatedAt: json.data.updatedAt,
     };
   } catch {
@@ -153,6 +196,7 @@ export function buildLocalSnapshot(): RodSyncData {
     todos: readLocalTodos(),
     ideas: readLocalIdeas(),
     journal: readLocalJournal(),
+    tombstones: readLocalTombstones(),
     updatedAt: readSyncMeta().updatedAt,
   };
 }
@@ -161,6 +205,7 @@ export function applyCloudData(data: RodSyncData) {
   writeLocalTodos(data.todos);
   writeLocalIdeas(data.ideas);
   writeLocalJournal(data.journal ?? []);
+  writeLocalTombstones(data.tombstones ?? []);
   writeSyncMeta({ updatedAt: data.updatedAt });
 }
 
@@ -199,6 +244,8 @@ let pushTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function scheduleCloudPush(getData: () => RodSyncData) {
   if (pushTimer) clearTimeout(pushTimer);
+  const revision = Date.now();
+  writeSyncMeta({ updatedAt: revision });
   pushTimer = setTimeout(() => {
     pushTimer = null;
     const snapshot = getData();
@@ -206,7 +253,8 @@ export function scheduleCloudPush(getData: () => RodSyncData) {
       todos: snapshot.todos,
       ideas: snapshot.ideas,
       journal: snapshot.journal ?? [],
-      updatedAt: snapshot.updatedAt,
+      tombstones: snapshot.tombstones ?? readLocalTombstones(),
+      updatedAt: revision,
     });
   }, 700);
 }

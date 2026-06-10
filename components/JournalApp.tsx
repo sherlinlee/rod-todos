@@ -19,8 +19,11 @@ import {
 } from "@/lib/journal";
 import {
   hydrateFromCloud,
+  journalTombstoneKey,
   readLocalIdeas,
   readLocalTodos,
+  readLocalTombstones,
+  recordTombstone,
   refreshFromCloud,
   scheduleCloudPush,
 } from "@/lib/sync-client";
@@ -114,6 +117,7 @@ export default function JournalApp() {
       todos: readLocalTodos(),
       ideas: readLocalIdeas(),
       journal: entries,
+      tombstones: readLocalTombstones(),
       updatedAt: Date.now(),
     }));
 
@@ -160,6 +164,9 @@ export default function JournalApp() {
   }
 
   function updateReflection(text: string) {
+    if (!text.trim()) {
+      recordTombstone(journalTombstoneKey(writingDate));
+    }
     setEntries((prev) => upsertJournalEntry(prev, writingDate, text));
   }
 

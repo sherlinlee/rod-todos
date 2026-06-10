@@ -8,8 +8,11 @@ import MicButton from "@/components/MicButton";
 import { type Idea, loadIdeas, saveIdeas } from "@/lib/ideas";
 import {
   hydrateFromCloud,
+  ideaTombstoneKey,
   readLocalJournal,
   readLocalTodos,
+  readLocalTombstones,
+  recordTombstone,
   refreshFromCloud,
   scheduleCloudPush,
 } from "@/lib/sync-client";
@@ -70,6 +73,7 @@ export default function IdeaFlowApp() {
       todos: readLocalTodos(),
       ideas,
       journal: readLocalJournal(),
+      tombstones: readLocalTombstones(),
       updatedAt: Date.now(),
     }));
   }, [ideas, hydrated]);
@@ -91,6 +95,7 @@ export default function IdeaFlowApp() {
   }
 
   function deleteIdea(id: string) {
+    recordTombstone(ideaTombstoneKey(id));
     setIdeas((prev) => prev.filter((i) => i.id !== id));
   }
 

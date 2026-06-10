@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { isRequestAuthenticated } from "@/lib/server/request-auth";
 import { loadSyncData, saveSyncData, isSyncStorageConfigured } from "@/lib/server/store";
 import { mergeSyncData } from "@/lib/sync-merge";
-import type { RodSyncData } from "@/lib/sync-types";
+import type { RodSyncData, SyncTombstone } from "@/lib/sync-types";
 import type { Idea } from "@/lib/ideas";
 import type { JournalEntry } from "@/lib/journal";
 import type { Todo } from "@/lib/types";
@@ -34,6 +34,15 @@ function isValidJournalEntry(value: unknown): value is JournalEntry {
   );
 }
 
+function isValidTombstone(value: unknown): value is SyncTombstone {
+  if (!value || typeof value !== "object") return false;
+  const tombstone = value as SyncTombstone;
+  return (
+    typeof tombstone.key === "string" &&
+    typeof tombstone.deletedAt === "number"
+  );
+}
+
 function parseBody(body: unknown): RodSyncData | null {
   if (!body || typeof body !== "object") return null;
   const raw = body as Partial<RodSyncData>;
@@ -45,11 +54,15 @@ function parseBody(body: unknown): RodSyncData | null {
   const journal = Array.isArray(raw.journal)
     ? raw.journal.filter(isValidJournalEntry)
     : [];
+  const tombstones = Array.isArray(raw.tombstones)
+    ? raw.tombstones.filter(isValidTombstone)
+    : [];
 
   return {
     todos,
     ideas,
     journal,
+    tombstones,
     updatedAt: raw.updatedAt,
   };
 }

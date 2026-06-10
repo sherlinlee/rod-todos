@@ -28,8 +28,11 @@ import {
   hydrateFromCloud,
   readLocalIdeas,
   readLocalJournal,
+  readLocalTombstones,
+  recordTombstone,
   refreshFromCloud,
   scheduleCloudPush,
+  todoTombstoneKey,
   writeLocalTodos,
 } from "@/lib/sync-client";
 import type {
@@ -104,6 +107,7 @@ export default function TodoApp() {
       todos,
       ideas: readLocalIdeas(),
       journal: readLocalJournal(),
+      tombstones: readLocalTombstones(),
       updatedAt: Date.now(),
     }));
   }, [todos, hydrated]);
@@ -227,6 +231,7 @@ export default function TodoApp() {
   }
 
   function deleteTodo(id: string) {
+    recordTombstone(todoTombstoneKey(id));
     setTodos((prev) =>
       prev.filter((t) => t.id !== id || isPermanentTodo(t)),
     );
@@ -242,9 +247,14 @@ export default function TodoApp() {
   }
 
   function clearCompleted() {
-    setTodos((prev) =>
-      prev.filter((t) => !t.completed || isPermanentTodo(t)),
-    );
+    setTodos((prev) => {
+      for (const todo of prev) {
+        if (todo.completed && !isPermanentTodo(todo)) {
+          recordTombstone(todoTombstoneKey(todo.id));
+        }
+      }
+      return prev.filter((t) => !t.completed || isPermanentTodo(t));
+    });
   }
 
   function handleReorder(activeId: string, overId: string) {
