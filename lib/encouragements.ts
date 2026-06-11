@@ -1,3 +1,5 @@
+export const ALL_DONE_COMPLIMENT = "yo, well done man! 👍";
+
 const MESSAGES = [
   { message: "You did it, Rod!", emoji: "⚡" },
   { message: "One less thing on your mind, Rod!", emoji: "💥" },
@@ -10,8 +12,8 @@ const MESSAGES = [
 ];
 
 const ALL_DONE = {
-  message: "Everything's done! Heck yeah, Rod — total legend!",
-  emoji: "🏆",
+  message: ALL_DONE_COMPLIMENT,
+  emoji: "👍",
 };
 
 export function pickEncouragement() {

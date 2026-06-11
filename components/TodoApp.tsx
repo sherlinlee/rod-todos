@@ -13,7 +13,7 @@ import RodCelebrationAvatar from "@/components/RodCelebrationAvatar";
 import BottomNav from "@/components/BottomNav";
 import WeatherForecast from "@/components/WeatherForecast";
 import { CATEGORIES } from "@/lib/categories";
-import { allDoneEncouragement, pickEncouragement } from "@/lib/encouragements";
+import { allDoneEncouragement, ALL_DONE_COMPLIMENT, pickEncouragement } from "@/lib/encouragements";
 import { hapticComplete } from "@/lib/haptics";
 import {
   allEssentialsDoneToday,
@@ -419,9 +419,16 @@ export default function TodoApp() {
                 </div>
 
                 {ritualCount > 0 && (
-                  <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/40 bg-background/80 px-3.5 py-2 text-xs font-semibold text-foreground/55">
-                    <span aria-hidden>⭐</span>
-                    {ritualCount} ritual{ritualCount === 1 ? "" : "s"}
+                  <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-accent-soft/50 bg-card/90 px-3.5 py-2 text-xs font-semibold text-foreground/75 shadow-sm backdrop-blur-sm sm:px-4 sm:text-sm">
+                    <span
+                      className="text-lg leading-none animate-bolt-sparkle"
+                      aria-hidden
+                    >
+                      ⭐
+                    </span>
+                    <p>
+                      {ritualCount} ritual{ritualCount === 1 ? "" : "s"} left
+                    </p>
                   </div>
                 )}
 
@@ -593,6 +600,24 @@ export default function TodoApp() {
       </main>
 
       <BottomNav />
+
+      {bootstrapped &&
+        hydrated &&
+        activeCount === 0 &&
+        regularTodos.length > 0 &&
+        statusFilter === "active" && (
+          <div
+            className="pointer-events-none fixed bottom-[4.75rem] left-0 z-30 max-w-[min(100%,20rem)] safe-px"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="animate-celebration-pop rounded-r-2xl border border-accent-soft/35 border-l-[3px] border-l-accent bg-card/95 py-2 pl-3 pr-4 shadow-[0_8px_24px_var(--shadow)] backdrop-blur-sm">
+              <p className="text-sm font-bold leading-snug text-foreground">
+                {ALL_DONE_COMPLIMENT}
+              </p>
+            </div>
+          </div>
+        )}
     </div>
   );
 }
