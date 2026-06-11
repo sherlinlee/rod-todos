@@ -10,7 +10,7 @@ type ConfettiBurstProps = {
 
 export default function ConfettiBurst({ seed }: ConfettiBurstProps) {
   const pieces = useMemo(() => {
-    return Array.from({ length: 18 }, (_, i) => ({
+    return Array.from({ length: 8 }, (_, i) => ({
       id: i,
       left: `${10 + ((seed * 37 + i * 19) % 80)}%`,
       delay: `${(i % 6) * 0.04}s`,
@@ -27,7 +27,7 @@ export default function ConfettiBurst({ seed }: ConfettiBurstProps) {
       {pieces.map((piece) => (
         <span
           key={piece.id}
-          className="animate-confetti absolute top-24 h-2.5 w-1.5 rounded-sm"
+          className="animate-confetti absolute top-24 h-2 w-1 rounded-sm will-change-transform"
           style={{
             left: piece.left,
             backgroundColor: piece.color,

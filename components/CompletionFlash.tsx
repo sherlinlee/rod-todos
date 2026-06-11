@@ -22,7 +22,7 @@ export default function CompletionFlash({
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 sm:bottom-6"
+      className="flex w-full justify-center px-2"
       role="status"
       aria-live="polite"
     >
