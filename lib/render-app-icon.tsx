@@ -3,18 +3,21 @@ import { svgToDataUri } from "@/lib/icon-svgs";
 type RenderAppIconOptions = {
   svg: string;
   size: number;
+  backgroundColor: string;
 };
 
-export function renderAppIcon({ svg, size }: RenderAppIconOptions) {
+export function renderAppIcon({
+  svg,
+  size,
+  backgroundColor,
+}: RenderAppIconOptions) {
   return (
     <div
       style={{
         width: size,
         height: size,
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "transparent",
+        background: backgroundColor,
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -23,7 +26,7 @@ export function renderAppIcon({ svg, size }: RenderAppIconOptions) {
         alt=""
         width={size}
         height={size}
-        style={{ display: "block" }}
+        style={{ display: "block", width: size, height: size }}
       />
     </div>
   );
