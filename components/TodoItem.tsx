@@ -42,7 +42,11 @@ export default function TodoItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: todo.id, disabled: editing });
+  } = useSortable({
+    id: todo.id,
+    disabled: editing,
+    transition: { duration: 200, easing: "cubic-bezier(0.25, 1, 0.5, 1)" },
+  });
 
   useEffect(() => {
     if (!editing) {
@@ -86,7 +90,10 @@ export default function TodoItem({
     <li
       ref={setNodeRef}
       style={style}
+      onContextMenu={editing ? undefined : (e) => e.preventDefault()}
       className={`paper-slip group relative flex flex-col gap-1.5 rounded-xl border border-accent-soft/45 px-2 py-2.5 transition sm:py-2 ${
+        editing ? "" : "select-none"
+      } ${
         isDragging
           ? "z-10 scale-[1.01] shadow-md ring-2 ring-accent/25"
           : editing
@@ -100,8 +107,9 @@ export default function TodoItem({
         <button
           type="button"
           disabled={editing}
-          className="flex h-8 w-5 shrink-0 cursor-grab touch-none items-center justify-center text-foreground/20 transition hover:text-accent active:cursor-grabbing disabled:opacity-30 sm:h-7"
+          className="sortable-handle tap-pad flex h-10 w-8 shrink-0 cursor-grab touch-none select-none items-center justify-center text-foreground/20 transition hover:text-accent active:cursor-grabbing disabled:opacity-30 sm:h-7 sm:w-5"
           aria-label={`Drag to reorder ${todo.text}`}
+          onContextMenu={(e) => e.preventDefault()}
           {...attributes}
           {...listeners}
         >

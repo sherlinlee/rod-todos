@@ -3,11 +3,13 @@
 import {
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -35,29 +37,43 @@ export default function SortableTodoList({
   onReorder,
 }: SortableTodoListProps) {
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 8 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
 
+  function handleDragStart(_event: DragStartEvent) {
+    document.body.classList.add("is-dragging");
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    document.body.classList.remove("is-dragging");
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     onReorder(String(active.id), String(over.id));
+  }
+
+  function handleDragCancel() {
+    document.body.classList.remove("is-dragging");
   }
 
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
       <SortableContext
         items={todos.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <ul className="space-y-1.5">
+        <ul className="sortable-list space-y-1.5">
           {todos.map((todo) => (
             <TodoItem
               key={todo.id}
