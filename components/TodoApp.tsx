@@ -13,7 +13,7 @@ import RodCelebrationAvatar from "@/components/RodCelebrationAvatar";
 import BottomNav from "@/components/BottomNav";
 import WeatherForecast from "@/components/WeatherForecast";
 import { CATEGORIES } from "@/lib/categories";
-import { allDoneEncouragement, ALL_DONE_COMPLIMENT, pickEncouragement } from "@/lib/encouragements";
+import { allDoneEncouragement, pickAllDoneCompliment, pickEncouragement } from "@/lib/encouragements";
 import { hapticComplete } from "@/lib/haptics";
 import {
   allEssentialsDoneToday,
@@ -85,6 +85,7 @@ export default function TodoApp() {
     message: string;
     emoji: string;
   } | null>(null);
+  const [allDoneCompliment, setAllDoneCompliment] = useState<string | null>(null);
   const lastToggleRef = useRef<{
     id: string;
     expectedCompleted: boolean;
@@ -218,6 +219,15 @@ export default function TodoApp() {
   const completedCount = regularTodos.filter((t) => t.completed).length;
   const ritualCount = pendingRituals.length;
 
+  useEffect(() => {
+    if (!bootstrapped || !hydrated) return;
+    if (activeCount === 0 && regularTodos.length > 0) {
+      setAllDoneCompliment((current) => current ?? pickAllDoneCompliment());
+    } else {
+      setAllDoneCompliment(null);
+    }
+  }, [bootstrapped, hydrated, activeCount, regularTodos.length]);
+
   const dismissCelebration = useCallback(() => setCelebration(null), []);
   const dismissCompletionFlash = useCallback(() => setCompletionFlash(null), []);
 
@@ -228,6 +238,7 @@ export default function TodoApp() {
   function celebrate(wasLastOne: boolean) {
     const picked = wasLastOne ? allDoneEncouragement() : pickEncouragement();
     if (wasLastOne) {
+      setAllDoneCompliment(picked.message);
       setCelebration({
         ...picked,
         seed: Date.now(),
@@ -542,7 +553,7 @@ export default function TodoApp() {
                     {statusFilter === "completed"
                       ? "Nothing checked off yet — you've got this!"
                       : statusFilter === "active"
-                        ? "All caught up — nice one, Rod."
+                        ? allDoneCompliment ?? "All caught up — nice one, Rod."
                         : "Nothing in the list yet — add a task above."}
                   </p>
                 </>
@@ -584,7 +595,7 @@ export default function TodoApp() {
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-accent-soft/40 pt-3.5 text-sm sm:mt-5 sm:pt-4">
               <span className="min-w-0 text-xs text-foreground/60 sm:text-sm">
                 {activeCount === 0
-                  ? ALL_DONE_COMPLIMENT
+                  ? "All clear ✓"
                   : `${activeCount} quest${activeCount === 1 ? "" : "s"} left`}
               </span>
               <button
@@ -600,24 +611,6 @@ export default function TodoApp() {
       </main>
 
       <BottomNav />
-
-      {bootstrapped &&
-        hydrated &&
-        activeCount === 0 &&
-        regularTodos.length > 0 &&
-        statusFilter === "active" && (
-          <div
-            className="pointer-events-none fixed bottom-[4.75rem] left-0 z-30 max-w-[min(100%,20rem)] safe-px"
-            role="status"
-            aria-live="polite"
-          >
-            <div className="animate-celebration-pop rounded-r-2xl border border-accent-soft/35 border-l-[3px] border-l-accent bg-card/95 py-2 pl-3 pr-4 shadow-[0_8px_24px_var(--shadow)] backdrop-blur-sm">
-              <p className="text-sm font-bold leading-snug text-foreground">
-                {ALL_DONE_COMPLIMENT}
-              </p>
-            </div>
-          </div>
-        )}
     </div>
   );
 }

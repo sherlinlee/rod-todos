@@ -1,5 +1,3 @@
-export const ALL_DONE_COMPLIMENT = "yo, well done man! 👍";
-
 const MESSAGES = [
   { message: "You did it, Rod!", emoji: "⚡" },
   { message: "One less thing on your mind, Rod!", emoji: "💥" },
@@ -11,15 +9,32 @@ const MESSAGES = [
   { message: "So satisfying, Rod!", emoji: "🎉" },
 ];
 
-const ALL_DONE = {
-  message: ALL_DONE_COMPLIMENT,
-  emoji: "👍",
-};
+const ALL_DONE_COMPLIMENTS = [
+  "yo, well done man! 👍",
+  "absolute unit, mate 💪",
+  "boss move, Rod 😎",
+  "that's the stuff 🔥",
+  "clean sweep, legend 🏆",
+  "nailed it, man ⚡",
+  "proper day, that 🎯",
+  "all quests down — respect 👊",
+  "you ate that, Rod 🍽️",
+  "main character energy 🚀",
+];
+
+export function pickAllDoneCompliment() {
+  return ALL_DONE_COMPLIMENTS[
+    Math.floor(Math.random() * ALL_DONE_COMPLIMENTS.length)
+  ];
+}
 
 export function pickEncouragement() {
   return MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
 }
 
 export function allDoneEncouragement() {
-  return ALL_DONE;
+  return {
+    message: pickAllDoneCompliment(),
+    emoji: "👍",
+  };
 }
