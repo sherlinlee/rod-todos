@@ -584,7 +584,7 @@ export default function TodoApp() {
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-accent-soft/40 pt-3.5 text-sm sm:mt-5 sm:pt-4">
               <span className="min-w-0 text-xs text-foreground/60 sm:text-sm">
                 {activeCount === 0
-                  ? "All quests cleared — you're amazing! 🎀"
+                  ? ALL_DONE_COMPLIMENT
                   : `${activeCount} quest${activeCount === 1 ? "" : "s"} left`}
               </span>
               <button
