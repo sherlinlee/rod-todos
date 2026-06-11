@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bellePink" x1="256" y1="48" x2="256" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff5f8"/>
+      <stop stop-color="#f8c8dc"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bellePink)"/>
+  <g transform="translate(256 268)">
+    <path d="M0-92c-34 0-62 28-62 62s28 62 62 62 62-28 62-62-28-62-62-62z" fill="#e63946"/>
+    <ellipse cx="0" cy="8" rx="48" ry="54" fill="#ef476f"/>
+    <path d="M-8-118c-6-18 8-32 22-28 8 14 16 22 8 28-10 6-22 4-30 0z" fill="#6bbf59"/>
+    <path d="M8-118c6-18-8-32-22-28-8 14-16 22-8 28 10 6 22 4 30 0z" fill="#7ed957"/>
+    <circle cx="-22" cy="-18" r="4" fill="#ffd166" opacity="0.9"/>
+    <circle cx="6" cy="-32" r="4" fill="#ffd166" opacity="0.9"/>
+    <circle cx="24" cy="-8" r="4" fill="#ffd166" opacity="0.9"/>
+    <circle cx="-8" cy="12" r="4" fill="#ffd166" opacity="0.9"/>
+    <circle cx="18" cy="22" r="4" fill="#ffd166" opacity="0.9"/>
+    <circle cx="-28" cy="18" r="4" fill="#ffd166" opacity="0.9"/>
+  </g>
+  <g transform="translate(132 148)">
+    <circle cx="0" cy="0" r="34" fill="#d62839"/>
+    <rect x="-4" y="-48" width="8" height="18" rx="4" fill="#6bbf59"/>
+    <path d="M0-48c8-6 16-4 18 4" stroke="#7ed957" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g fill="#ff8fab">
+    <circle cx="388" cy="132" r="16"/>
+    <circle cx="404" cy="148" r="16"/>
+    <circle cx="372" cy="148" r="16"/>
+    <circle cx="388" cy="164" r="16"/>
+    <circle cx="388" cy="148" r="9" fill="#ffd166"/>
+  </g>
+  <g fill="#ff8fab" transform="translate(108 360)">
+    <circle cx="0" cy="0" r="14"/>
+    <circle cx="16" cy="14" r="14"/>
+    <circle cx="-16" cy="14" r="14"/>
+    <circle cx="0" cy="24" r="14"/>
+    <circle cx="0" cy="12" r="8" fill="#ffd166"/>
+  </g>
+  <g fill="#ff8fab" transform="translate(400 360)">
+    <circle cx="0" cy="0" r="12"/>
+    <circle cx="14" cy="12" r="12"/>
+    <circle cx="-14" cy="12" r="12"/>
+    <circle cx="0" cy="20" r="12"/>
+    <circle cx="0" cy="10" r="6" fill="#ffd166"/>
+  </g>
+</svg>

@@ -1,0 +1,23 @@
+{
+  "name": "rod's to-do(s)",
+  "short_name": "rod's to-do(s)",
+  "description": "A bold little to-do app, just for Rod",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#eaf4fc",
+  "theme_color": "#eaf4fc",
+  "icons": [
+    {
+      "src": "/icon",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

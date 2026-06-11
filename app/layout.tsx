@@ -17,6 +17,7 @@ const bangers = Bangers({
 export const metadata: Metadata = {
   title: "rod's to-do(s) ⚡",
   description: "A bold little to-do app, just for Rod",
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
