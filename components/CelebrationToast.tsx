@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import RodCelebrationAvatar from "@/components/RodCelebrationAvatar";
 
-const TOAST_MS = 1200;
+const TOAST_MS = 1500;
 
 type CelebrationToastProps = {
   message: string;
