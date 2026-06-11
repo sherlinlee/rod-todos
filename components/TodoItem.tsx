@@ -45,7 +45,6 @@ export default function TodoItem({
   } = useSortable({
     id: todo.id,
     disabled: editing,
-    transition: { duration: 200, easing: "cubic-bezier(0.25, 1, 0.5, 1)" },
   });
 
   useEffect(() => {
@@ -57,8 +56,9 @@ export default function TodoItem({
   }, [todo, editing]);
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+    transform: CSS.Translate.toString(transform),
+    transition: isDragging ? undefined : transition,
+    opacity: isDragging ? 0.22 : 1,
   };
 
   const category = getCategoryMeta(todo.category);
@@ -91,15 +91,15 @@ export default function TodoItem({
       ref={setNodeRef}
       style={style}
       onContextMenu={editing ? undefined : (e) => e.preventDefault()}
-      className={`paper-slip group relative flex flex-col gap-1.5 rounded-xl border border-accent-soft/45 px-2 py-2.5 transition sm:py-2 ${
+      className={`paper-slip group relative flex flex-col gap-1.5 rounded-xl border border-accent-soft/45 px-2 py-2.5 sm:py-2 ${
         editing ? "" : "select-none"
       } ${
         isDragging
-          ? "z-10 scale-[1.01] shadow-md ring-2 ring-accent/25"
+          ? "pointer-events-none border-dashed border-accent-soft/60"
           : editing
             ? "border-accent/50 ring-1 ring-accent/15"
             : "hover:border-accent/40"
-      } ${showFly ? "animate-complete-fly" : "animate-pop-in"} ${
+      } ${showFly ? "animate-complete-fly" : isDragging ? "" : "animate-pop-in"} ${
         isChecking ? "bg-accent/[0.06]" : ""
       }`}
     >

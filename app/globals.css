@@ -108,6 +108,16 @@ body.is-dragging textarea {
   user-select: text;
 }
 
+body.is-dragging .animate-pop-in {
+  animation: none;
+}
+
+.sortable-drag-preview {
+  touch-action: none;
+  will-change: transform;
+  cursor: grabbing;
+}
+
 .paper-box {
   background: linear-gradient(160deg, var(--kraft) 0%, #f0f6fd 100%);
   box-shadow:

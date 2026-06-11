@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
@@ -17,6 +19,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import TodoItem, { type TodoUpdates } from "@/components/TodoItem";
+import TodoDragPreview from "@/components/TodoDragPreview";
 import type { Todo } from "@/lib/types";
 
 type SortableTodoListProps = {
@@ -36,6 +39,11 @@ export default function SortableTodoList({
   onUpdate,
   onReorder,
 }: SortableTodoListProps) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeTodo = activeId
+    ? todos.find((todo) => todo.id === activeId)
+    : undefined;
+
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, {
@@ -46,11 +54,13 @@ export default function SortableTodoList({
     }),
   );
 
-  function handleDragStart(_event: DragStartEvent) {
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
     document.body.classList.add("is-dragging");
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
     document.body.classList.remove("is-dragging");
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -58,6 +68,7 @@ export default function SortableTodoList({
   }
 
   function handleDragCancel() {
+    setActiveId(null);
     document.body.classList.remove("is-dragging");
   }
 
@@ -87,6 +98,15 @@ export default function SortableTodoList({
           ))}
         </ul>
       </SortableContext>
+      <DragOverlay
+        adjustScale={false}
+        dropAnimation={{
+          duration: 220,
+          easing: "cubic-bezier(0.25, 1, 0.5, 1)",
+        }}
+      >
+        {activeTodo ? <TodoDragPreview todo={activeTodo} /> : null}
+      </DragOverlay>
     </DndContext>
   );
 }
