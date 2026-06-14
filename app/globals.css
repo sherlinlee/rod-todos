@@ -148,6 +148,8 @@ body.is-dragging .animate-pop-in {
   background: linear-gradient(160deg, #eef6ff 0%, var(--card) 100%);
 }
 
+/* Recessed weather strip — legacy; weather widget now uses inline dark tokens */
+
 .filter-bar {
   border-radius: 0.75rem;
   border: 1px solid rgb(26 51 82 / 0.08);

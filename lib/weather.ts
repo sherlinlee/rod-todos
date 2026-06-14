@@ -5,6 +5,20 @@ export type WeatherDay = {
   description: string;
   high: number;
   low: number;
+  rainSummary: string;
+  hours: WeatherHour[];
+};
+
+export type WeatherHour = {
+  time: string;
+  label: string;
+  emoji: string;
+  description: string;
+  precipitation: number;
+  probability: number;
+  rain: number;
+  showers: number;
+  isWet: boolean;
 };
 
 export type WeatherLocation = {
@@ -55,6 +69,51 @@ function dayLabel(isoDate: string, index: number) {
   if (index === 1) return "Tomorrow";
   const date = new Date(`${isoDate}T12:00:00`);
   return date.toLocaleDateString(undefined, { weekday: "short" });
+}
+
+function hourLabel(isoDateTime: string) {
+  return new Date(isoDateTime).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    hour12: true,
+  }).toLowerCase();
+}
+
+function numberAt(values: number[], index: number) {
+  const value = values[index];
+  return Number.isFinite(value) ? value : 0;
+}
+
+function buildRainSummary(hours: WeatherHour[]) {
+  const wetHours = hours.filter((hour) => hour.isWet);
+  if (wetHours.length === 0) return "No major rain expected";
+
+  let bestStart = 0;
+  let bestEnd = 0;
+  let currentStart = 0;
+
+  for (let i = 1; i < wetHours.length; i += 1) {
+    const previous = new Date(wetHours[i - 1].time).getTime();
+    const current = new Date(wetHours[i].time).getTime();
+    const isNextHour = current - previous <= 60 * 60 * 1000;
+
+    if (!isNextHour) {
+      if (i - 1 - currentStart > bestEnd - bestStart) {
+        bestStart = currentStart;
+        bestEnd = i - 1;
+      }
+      currentStart = i;
+    }
+  }
+
+  if (wetHours.length - 1 - currentStart > bestEnd - bestStart) {
+    bestStart = currentStart;
+    bestEnd = wetHours.length - 1;
+  }
+
+  const start = wetHours[bestStart];
+  const end = wetHours[bestEnd];
+  if (start.time === end.time) return `Rain likely around ${start.label}`;
+  return `Rain likely ${start.label}-${end.label}`;
 }
 
 async function reverseGeocode(
@@ -154,6 +213,7 @@ export async function fetchForecast(
     latitude: String(location.latitude),
     longitude: String(location.longitude),
     daily: "weather_code,temperature_2m_max,temperature_2m_min",
+    hourly: "weather_code,precipitation,precipitation_probability,rain,showers",
     timezone: "auto",
     forecast_days: "2",
   });
@@ -168,11 +228,48 @@ export async function fetchForecast(
       temperature_2m_max: number[];
       temperature_2m_min: number[];
     };
+    hourly: {
+      time: string[];
+      weather_code: number[];
+      precipitation: number[];
+      precipitation_probability: number[];
+      rain: number[];
+      showers: number[];
+    };
   };
 
   return data.daily.time.slice(0, 2).map((date, index) => {
     const code = data.daily.weather_code[index];
     const { emoji, description } = describeWeather(code);
+    const hours = data.hourly.time
+      .map((time, hourIndex) => {
+        const hourCode = numberAt(data.hourly.weather_code, hourIndex);
+        const precipitation = numberAt(data.hourly.precipitation, hourIndex);
+        const probability = numberAt(
+          data.hourly.precipitation_probability,
+          hourIndex,
+        );
+        const rain = numberAt(data.hourly.rain, hourIndex);
+        const showers = numberAt(data.hourly.showers, hourIndex);
+        const weather = describeWeather(hourCode);
+
+        return {
+          time,
+          label: hourLabel(time),
+          emoji: weather.emoji,
+          description: weather.description,
+          precipitation,
+          probability,
+          rain,
+          showers,
+          isWet:
+            probability >= 50 ||
+            precipitation >= 0.2 ||
+            rain >= 0.2 ||
+            showers >= 0.2,
+        };
+      })
+      .filter((hour) => hour.time.startsWith(date));
 
     return {
       date,
@@ -181,6 +278,8 @@ export async function fetchForecast(
       description,
       high: Math.round(data.daily.temperature_2m_max[index]),
       low: Math.round(data.daily.temperature_2m_min[index]),
+      rainSummary: buildRainSummary(hours),
+      hours,
     };
   });
 }

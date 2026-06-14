@@ -72,6 +72,7 @@ export const BELLE_APP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewB
   </defs>
   <rect width="512" height="512" fill="url(#bellePink)"/>
   <g transform="translate(256 300) scale(2.55)">${STRAWBERRY}</g>
+  <g transform="translate(256 252) scale(5.6) translate(-24 -24)">${BELLE_BEAR_AVATAR}</g>
   <g transform="translate(138 148) scale(1.45)">
     <circle cx="0" cy="0" r="34" fill="#d62839"/>
     <rect x="-4" y="-48" width="8" height="18" rx="4" fill="#6bbf59"/>
