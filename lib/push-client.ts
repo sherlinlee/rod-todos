@@ -220,20 +220,48 @@ export async function unsubscribeFromPush() {
   storePushEndpoint(null);
 }
 
-export async function sendTestPush() {
+export async function sendTestPush(): Promise<{
+  sent: number;
+  total: number;
+  shownLocally: boolean;
+}> {
   const res = await fetch("/api/push/test", {
     method: "POST",
     credentials: "include",
   });
   const json = (await res.json().catch(() => null)) as
-    | { ok?: boolean; error?: string; sent?: number }
+    | { ok?: boolean; error?: string; sent?: number; total?: number }
     | null;
   if (!res.ok) {
     throw new Error(json?.error ?? "test_failed");
   }
-  if (!json?.ok || (json.sent ?? 0) === 0) {
+  const sent = json?.sent ?? 0;
+  const total = json?.total ?? 0;
+  if (!json?.ok || sent === 0) {
     throw new Error(json?.error ?? "delivery_failed");
   }
+
+  let shownLocally = false;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    await registration.showNotification("rod's to-do(s) ⚡ — test ping", {
+      body: "Push notifications are working ✓",
+      icon: "/icon-512.png",
+      badge: "/icon-512.png",
+      tag: "push-test-local",
+    });
+    shownLocally = true;
+  } catch {
+    if (Notification.permission === "granted") {
+      new Notification("rod's to-do(s) ⚡ — test ping", {
+        body: "Push notifications are working ✓",
+        icon: "/icon-512.png",
+      });
+      shownLocally = true;
+    }
+  }
+
+  return { sent, total, shownLocally };
 }
 
 export async function syncPushSubscriptionState() {

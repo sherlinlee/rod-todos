@@ -106,6 +106,19 @@ export function hasUserTodos(data: RodSyncData) {
   return data.todos.some((todo) => !todo.permanent);
 }
 
+function contentRevision(
+  timestamps: number[],
+): number {
+  if (timestamps.length === 0) return 0;
+  return Math.max(...timestamps);
+}
+
+function userTodoTimestamps(todos: Todo[]): number[] {
+  return todos
+    .filter((todo) => !todo.permanent)
+    .map(todoUpdatedAt);
+}
+
 export function mergeSyncData(
   local: RodSyncData,
   cloud: RodSyncData,
@@ -113,13 +126,10 @@ export function mergeSyncData(
   const tombstones = mergeTombstones(local.tombstones, cloud.tombstones);
   const tombstoneLookup = tombstoneMap(tombstones);
 
-  const todoLocalRevision = hasUserTodos(local) ? local.updatedAt : 0;
-  const ideaLocalRevision = local.ideas.length > 0 ? local.updatedAt : 0;
-  const journalLocalRevision = (local.journal ?? []).some((entry) =>
-    entry.text.trim(),
-  )
-    ? local.updatedAt
-    : 0;
+  const todoLocalRevision = contentRevision(userTodoTimestamps(local.todos));
+  const ideaLocalRevision = contentRevision(
+    local.ideas.map((idea) => idea.createdAt),
+  );
 
   let todos = ensureEssentials(
     migrateTodos(
@@ -134,7 +144,15 @@ export function mergeSyncData(
     ),
   );
 
-  if (!hasUserTodos({ ...local, todos: local.todos }) && hasUserTodos(cloud)) {
+  const localUserTodoCount = userTodoTimestamps(local.todos).length;
+  const cloudUserTodoCount = userTodoTimestamps(cloud.todos).length;
+  const mergedUserTodoCount = userTodoTimestamps(todos).length;
+
+  if (
+    (!hasUserTodos({ ...local, todos: local.todos }) && hasUserTodos(cloud)) ||
+    (cloudUserTodoCount > mergedUserTodoCount &&
+      cloudUserTodoCount >= localUserTodoCount)
+  ) {
     todos = ensureEssentials(migrateTodos(cloud.todos));
   }
 

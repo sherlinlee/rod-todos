@@ -9,6 +9,7 @@ import { ensureEssentials } from "@/lib/essentials";
 import { migrateTodos } from "@/lib/migrate";
 import {
   hasUserContent,
+  hasUserTodos,
   mergeSyncData,
   needsCloudPush,
 } from "@/lib/sync-merge";
@@ -185,10 +186,10 @@ function localRevision(local: RodSyncData): number {
 async function pushCloudSyncMerged(local: RodSyncData): Promise<boolean> {
   pushChain = pushChain.then(async () => {
     const cloud = await fetchCloudSync();
-    const revision = localRevision(local);
-    const localWithRevision = { ...local, updatedAt: revision };
+    const localWithRevision = { ...local, updatedAt: localRevision(local) };
 
     if (!cloud) {
+      if (!hasUserContent(localWithRevision)) return true;
       const payload = { ...localWithRevision, updatedAt: Date.now() };
       applyCloudData(payload);
       return pushCloudSync(payload);
@@ -196,7 +197,27 @@ async function pushCloudSyncMerged(local: RodSyncData): Promise<boolean> {
 
     const merged = mergeSyncData(localWithRevision, cloud);
 
+    if (
+      !hasUserTodos(merged) &&
+      hasUserTodos(cloud) &&
+      !hasUserTodos(localWithRevision)
+    ) {
+      const recovered = {
+        ...merged,
+        todos: ensureEssentials(migrateTodos(cloud.todos)),
+      };
+      applyCloudData(recovered);
+      if (!needsCloudPush(recovered, cloud)) return true;
+      const payload = { ...recovered, updatedAt: Date.now() };
+      return pushCloudSync(payload);
+    }
+
     if (!needsCloudPush(merged, cloud)) {
+      applyCloudData(merged);
+      return true;
+    }
+
+    if (!hasUserTodos(merged) && hasUserTodos(cloud)) {
       applyCloudData(merged);
       return true;
     }
@@ -276,8 +297,6 @@ let pushTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function scheduleCloudPush(getData: () => RodSyncData) {
   if (pushTimer) clearTimeout(pushTimer);
-  const revision = Date.now();
-  writeSyncMeta({ updatedAt: revision });
   pushTimer = setTimeout(() => {
     pushTimer = null;
     const snapshot = getData();
@@ -286,7 +305,7 @@ export function scheduleCloudPush(getData: () => RodSyncData) {
       ideas: snapshot.ideas,
       journal: snapshot.journal ?? [],
       tombstones: snapshot.tombstones ?? readLocalTombstones(),
-      updatedAt: revision,
+      updatedAt: readSyncMeta().updatedAt,
     });
   }, 700);
 }

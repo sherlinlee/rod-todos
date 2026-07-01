@@ -27,7 +27,6 @@ import {
   uncompletePermanentTodo,
 } from "@/lib/essentials";
 import { migrateTodos, reorderTodos, sortByDueDate } from "@/lib/migrate";
-import { mergeSyncData } from "@/lib/sync-merge";
 import {
   remainingTodayRegularCount,
   todayRegularTodos,
@@ -116,23 +115,15 @@ export default function TodoApp() {
   }, []);
 
   const onCloudRefresh = useCallback(
-    (cloud: Awaited<ReturnType<typeof refreshFromCloud>>) => {
-      if (!cloud) return;
+    (data: Awaited<ReturnType<typeof refreshFromCloud>>) => {
+      if (!data) return;
 
-      const localSnapshot = {
-        todos: todosRef.current,
-        ideas: readLocalIdeas(),
-        journal: readLocalJournal(),
-        tombstones: readLocalTombstones(),
-        updatedAt: Date.now(),
-      };
-      const merged = mergeSyncData(localSnapshot, cloud);
       const last = lastToggleRef.current;
       const localTodo = last
         ? todosRef.current.find((t) => t.id === last.id)
         : undefined;
       const mergedTodo = last
-        ? merged.todos.find((t) => t.id === last.id)
+        ? data.todos.find((t) => t.id === last.id)
         : undefined;
 
       if (
@@ -144,10 +135,7 @@ export default function TodoApp() {
         return;
       }
 
-      setTodos(merged.todos);
-      writeLocalTodos(merged.todos);
-      writeLocalIdeas(merged.ideas);
-      writeLocalJournal(merged.journal ?? []);
+      setTodos(data.todos);
     },
     [],
   );

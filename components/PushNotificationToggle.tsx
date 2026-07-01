@@ -134,9 +134,13 @@ export default function PushNotificationToggle() {
     setStatus("working");
 
     try {
-      await sendTestPush();
+      const result = await sendTestPush();
       setStatus("enabled");
-      setMessage("Test notification sent");
+      setMessage(
+        result.shownLocally
+          ? `Test sent (${result.sent}/${result.total}) — you should see it now`
+          : `Test sent (${result.sent}/${result.total}) — switch away from the app to see the banner`,
+      );
     } catch (err) {
       setStatus("enabled");
       const code = err instanceof Error ? err.message : "test_failed";
