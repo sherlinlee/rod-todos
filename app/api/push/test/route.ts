@@ -32,5 +32,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (result.sent === 0) {
+    return NextResponse.json(
+      { ok: false, error: "delivery_failed", ...result },
+      { status: 502 },
+    );
+  }
+
   return NextResponse.json({ ok: true, ...result });
 }

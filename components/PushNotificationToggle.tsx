@@ -142,6 +142,8 @@ export default function PushNotificationToggle() {
       const code = err instanceof Error ? err.message : "test_failed";
       if (code === "no_subscriptions") {
         setError("No active subscription — try turning reminders on again");
+      } else if (code === "delivery_failed") {
+        setError(describePushError(code));
       } else {
         setError("Test notification failed");
       }

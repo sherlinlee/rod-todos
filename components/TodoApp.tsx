@@ -38,6 +38,7 @@ import {
   hydrateFromCloud,
   readLocalIdeas,
   readLocalJournal,
+  readLocalTombstones,
   refreshFromCloud,
   scheduleCloudPush,
   writeLocalIdeas,
@@ -122,6 +123,7 @@ export default function TodoApp() {
         todos: todosRef.current,
         ideas: readLocalIdeas(),
         journal: readLocalJournal(),
+        tombstones: readLocalTombstones(),
         updatedAt: Date.now(),
       };
       const merged = mergeSyncData(localSnapshot, cloud);
@@ -160,6 +162,7 @@ export default function TodoApp() {
         todos,
         ideas: readLocalIdeas(),
         journal: readLocalJournal(),
+        tombstones: readLocalTombstones(),
         updatedAt: Date.now(),
       }));
     }, 0);

@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isRequestAuthenticated } from "@/lib/server/request-auth";
-import { loadSyncData, saveSyncData } from "@/lib/server/store";
-import type { BelleSyncData } from "@/lib/sync-types";
+import {
+  isSyncStorageConfigured,
+  loadSyncData,
+  saveSyncData,
+} from "@/lib/server/store";
+import { mergeSyncData } from "@/lib/sync-merge";
+import type { RodSyncData, SyncTombstone } from "@/lib/sync-types";
 import type { Idea } from "@/lib/ideas";
 import { normalizeJournalEntries, type JournalEntry } from "@/lib/journal";
 import type { Todo } from "@/lib/types";
@@ -29,9 +34,18 @@ function isValidJournalEntry(value: unknown): value is JournalEntry {
   return typeof entry.date === "string" && typeof entry.text === "string";
 }
 
-function parseBody(body: unknown): BelleSyncData | null {
+function isValidTombstone(value: unknown): value is SyncTombstone {
+  if (!value || typeof value !== "object") return false;
+  const tombstone = value as SyncTombstone;
+  return (
+    typeof tombstone.key === "string" &&
+    typeof tombstone.deletedAt === "number"
+  );
+}
+
+function parseBody(body: unknown): RodSyncData | null {
   if (!body || typeof body !== "object") return null;
-  const raw = body as Partial<BelleSyncData>;
+  const raw = body as Partial<RodSyncData>;
   if (!Array.isArray(raw.todos) || !Array.isArray(raw.ideas)) return null;
   if (typeof raw.updatedAt !== "number") return null;
 
@@ -40,11 +54,15 @@ function parseBody(body: unknown): BelleSyncData | null {
   const journal = Array.isArray(raw.journal)
     ? normalizeJournalEntries(raw.journal.filter(isValidJournalEntry))
     : [];
+  const tombstones = Array.isArray(raw.tombstones)
+    ? raw.tombstones.filter(isValidTombstone)
+    : [];
 
   return {
     todos,
     ideas,
     journal,
+    tombstones,
     updatedAt: raw.updatedAt,
   };
 }
@@ -79,7 +97,18 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  const saved = await saveSyncData(parsed);
+  if (!isSyncStorageConfigured()) {
+    return NextResponse.json(
+      { ok: false, error: "storage_not_configured" },
+      { status: 503 },
+    );
+  }
+
+  const existing = await loadSyncData();
+  const merged = existing ? mergeSyncData(parsed, existing) : parsed;
+  const payload = { ...merged, updatedAt: Date.now() };
+
+  const saved = await saveSyncData(payload);
   if (!saved) {
     return NextResponse.json(
       { ok: false, error: "storage_unavailable" },
@@ -87,5 +116,5 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true, data: parsed });
+  return NextResponse.json({ ok: true, data: payload });
 }

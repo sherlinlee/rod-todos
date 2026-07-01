@@ -221,12 +221,18 @@ export async function unsubscribeFromPush() {
 }
 
 export async function sendTestPush() {
-  const res = await fetch("/api/push/test", { method: "POST" });
+  const res = await fetch("/api/push/test", {
+    method: "POST",
+    credentials: "include",
+  });
+  const json = (await res.json().catch(() => null)) as
+    | { ok?: boolean; error?: string; sent?: number }
+    | null;
   if (!res.ok) {
-    const json = (await res.json().catch(() => null)) as
-      | { error?: string }
-      | null;
     throw new Error(json?.error ?? "test_failed");
+  }
+  if (!json?.ok || (json.sent ?? 0) === 0) {
+    throw new Error(json?.error ?? "delivery_failed");
   }
 }
 
@@ -272,6 +278,8 @@ export function describePushError(code: string) {
       return "Browser rejected the VAPID key — regenerate keys, update Vercel env, redeploy, then try again";
     case "subscribe_failed":
       return "Could not save your subscription on the server";
+    case "delivery_failed":
+      return "Could not deliver the test ping — turn reminders off, then on again";
     default:
       return "Could not enable notifications";
   }

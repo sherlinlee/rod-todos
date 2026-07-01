@@ -2,10 +2,16 @@ import type { Idea } from "@/lib/ideas";
 import type { JournalEntry } from "@/lib/journal";
 import type { Todo } from "@/lib/types";
 
+export type SyncTombstone = {
+  key: string;
+  deletedAt: number;
+};
+
 export type RodSyncData = {
   todos: Todo[];
   ideas: Idea[];
   journal: JournalEntry[];
+  tombstones?: SyncTombstone[];
   updatedAt: number;
 };
 
