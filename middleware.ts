@@ -13,6 +13,7 @@ export function middleware(request: NextRequest) {
     pathname === "/icon" ||
     pathname === "/apple-icon" ||
     pathname === "/manifest.webmanifest" ||
+    pathname === "/sw.js" ||
     pathname === "/apple-touch-icon.png" ||
     pathname === "/icon-512.png"
   ) {

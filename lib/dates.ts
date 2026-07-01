@@ -2,6 +2,16 @@ export function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Calendar date (YYYY-MM-DD) in a given IANA timezone, e.g. America/New_York */
+export function todayStringInTimezone(timeZone: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 export function dayBefore(iso: string): string {
   const [year, month, day] = iso.split("-").map(Number);
   const date = new Date(year, month - 1, day - 1);

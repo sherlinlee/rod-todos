@@ -12,6 +12,8 @@ import RodAvatar from "@/components/RodAvatar";
 import RodCelebrationAvatar from "@/components/RodCelebrationAvatar";
 import BottomNav from "@/components/BottomNav";
 import WeatherForecast from "@/components/WeatherForecast";
+import ReminderPrompt, { ReminderToggle } from "@/components/ReminderPrompt";
+import { useDueReminders } from "@/hooks/useDueReminders";
 import { CATEGORIES } from "@/lib/categories";
 import { allDoneEncouragement, pickAllDoneCompliment, pickEncouragement } from "@/lib/encouragements";
 import { hapticComplete } from "@/lib/haptics";
@@ -93,6 +95,9 @@ export default function TodoApp() {
   } | null>(null);
   const lastAddRef = useRef(0);
   const todosRef = useRef<Todo[]>([]);
+  const [showReminderPrompt, setShowReminderPrompt] = useState(false);
+  const [reminderDueDate, setReminderDueDate] = useState<string | null>(null);
+  const reminders = useDueReminders();
 
   useEffect(() => {
     todosRef.current = todos;
@@ -284,6 +289,11 @@ export default function TodoApp() {
       tombstones: readLocalTombstones(),
       updatedAt: now,
     }));
+
+    if (dueDate && reminders.status !== "subscribed") {
+      setReminderDueDate(dueDate);
+      setShowReminderPrompt(true);
+    }
   }
 
   function toggleTodo(id: string) {
@@ -448,6 +458,13 @@ export default function TodoApp() {
                     rituals done ✓
                   </div>
                 )}
+
+                <ReminderToggle
+                  status={reminders.status}
+                  busy={reminders.busy}
+                  onEnable={() => void reminders.enable()}
+                  onDisable={() => void reminders.disable()}
+                />
               </>
             )}
           </div>
@@ -468,6 +485,26 @@ export default function TodoApp() {
             onDueDateChange={setDueDate}
             onSubmit={addTodo}
           />
+          {showReminderPrompt && (
+            <ReminderPrompt
+              status={reminders.status}
+              busy={reminders.busy}
+              dueDateLabel={
+                reminderDueDate
+                  ? new Date(`${reminderDueDate}T12:00:00`).toLocaleDateString(
+                      undefined,
+                      { weekday: "short", month: "short", day: "numeric" },
+                    )
+                  : undefined
+              }
+              onEnable={() => {
+                void reminders.enable().then((result) => {
+                  if (result === "granted") setShowReminderPrompt(false);
+                });
+              }}
+              onDismiss={() => setShowReminderPrompt(false)}
+            />
+          )}
         </section>
 
         <section className="section-list rounded-2xl border border-accent-soft/25 p-3.5 shadow-[0_8px_24px_var(--shadow)] sm:p-4">
