@@ -120,34 +120,49 @@ function syncPayloadKey(data: RodSyncData): string {
   return JSON.stringify({ todos, ideas, journal, tombstones });
 }
 
+export function hasUserTodos(data: RodSyncData) {
+  return data.todos.some((todo) => !todo.permanent);
+}
+
 export function mergeSyncData(
   local: RodSyncData,
   cloud: RodSyncData,
 ): RodSyncData {
-  // Empty local (e.g. stale PWA storage after a bad sync) must not block cloud items
-  // whose per-item timestamps are older than a bogus high local revision.
-  const localRevision = hasUserContent(local) ? local.updatedAt : 0;
   const tombstones = mergeTombstones(local.tombstones, cloud.tombstones);
   const tombstoneLookup = tombstoneMap(tombstones);
 
-  const todos = ensureEssentials(
+  // Use per-type revision guards so empty todos on a stale PWA are not blocked
+  // just because journal or ideas still exist locally.
+  const todoLocalRevision = hasUserTodos(local) ? local.updatedAt : 0;
+  const ideaLocalRevision = local.ideas.length > 0 ? local.updatedAt : 0;
+  const journalLocalRevision = (local.journal ?? []).some((entry) =>
+    entry.text.trim(),
+  )
+    ? local.updatedAt
+    : 0;
+
+  let todos = ensureEssentials(
     migrateTodos(
       mergeById(
         local.todos,
         cloud.todos,
         todoUpdatedAt,
-        localRevision,
+        todoLocalRevision,
         (todo) => `todo:${todo.id}`,
         tombstoneLookup,
       ),
     ),
   );
 
+  if (!hasUserTodos({ ...local, todos: local.todos }) && hasUserTodos(cloud)) {
+    todos = ensureEssentials(migrateTodos(cloud.todos));
+  }
+
   const ideas = mergeById(
     local.ideas,
     cloud.ideas,
     (idea) => idea.createdAt,
-    localRevision,
+    ideaLocalRevision,
     (idea) => `idea:${idea.id}`,
     tombstoneLookup,
   ).sort((a, b) => b.createdAt - a.createdAt);
@@ -155,7 +170,7 @@ export function mergeSyncData(
   const journal = mergeJournal(
     local.journal ?? [],
     cloud.journal ?? [],
-    localRevision,
+    journalLocalRevision,
     tombstoneLookup,
   );
 
@@ -174,7 +189,7 @@ export function needsCloudPush(merged: RodSyncData, cloud: RodSyncData) {
 
 export function hasUserContent(data: RodSyncData) {
   const hasIdeas = data.ideas.length > 0;
-  const hasTodos = data.todos.some((todo) => !todo.permanent);
+  const hasTodos = hasUserTodos(data);
   const hasJournal = (data.journal ?? []).some((entry) => entry.text.trim());
   return hasIdeas || hasTodos || hasJournal;
 }

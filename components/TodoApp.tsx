@@ -26,7 +26,7 @@ import {
   uncompletePermanentTodo,
 } from "@/lib/essentials";
 import { migrateTodos, reorderTodos, sortByDueDate } from "@/lib/migrate";
-import { mergeSyncData } from "@/lib/sync-merge";
+import { mergeSyncData, hasUserTodos } from "@/lib/sync-merge";
 import { useCloudRefresh } from "@/hooks/useCloudRefresh";
 import {
   hydrateFromCloud,
@@ -144,10 +144,12 @@ export default function TodoApp() {
         return;
       }
       const localSnapshot = buildLocalSnapshot();
-      localSnapshot.updatedAt = Math.max(
-        localSnapshot.updatedAt,
-        Date.now(),
-      );
+      if (hasUserTodos(localSnapshot)) {
+        localSnapshot.updatedAt = Math.max(
+          localSnapshot.updatedAt,
+          Date.now(),
+        );
+      }
       const merged = mergeSyncData(localSnapshot, cloud);
       const last = lastToggleRef.current;
       const localTodo = last
