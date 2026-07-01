@@ -46,6 +46,7 @@ const STRAWBERRY = `<g>
 
 export const ROD_APP_ICON_BG = "#b8dcf0";
 export const BELLE_APP_ICON_BG = "#f5a0bd";
+export const ROD_HOMESCREEN_ICON_BG = "#b8dcf0";
 export const SPARK_APP_ICON_BG = "#fdba74";
 export const REFLECTION_APP_ICON_BG = "#f7f4ef";
 export const COUPLE_APP_ICON_BG = "#bce4f6";
@@ -71,6 +72,28 @@ export const BELLE_APP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewB
     </linearGradient>
   </defs>
   <rect width="512" height="512" fill="url(#bellePink)"/>
+  <g transform="translate(256 300) scale(2.55)">${STRAWBERRY}</g>
+  <g transform="translate(256 252) scale(5.6) translate(-24 -24)">${BELLE_BEAR_AVATAR}</g>
+  <g transform="translate(138 148) scale(1.45)">
+    <circle cx="0" cy="0" r="34" fill="#d62839"/>
+    <rect x="-4" y="-48" width="8" height="18" rx="4" fill="#6bbf59"/>
+    <path d="M0-48c8-6 16-4 18 4" stroke="#7ed957" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g fill="#ff8fab" transform="translate(392 118) scale(1.15)">
+    <circle cx="0" cy="0" r="16"/><circle cx="16" cy="14" r="16"/><circle cx="-16" cy="14" r="16"/><circle cx="0" cy="24" r="16"/>
+    <circle cx="0" cy="12" r="9" fill="#ffd166"/>
+  </g>
+</svg>`;
+
+/** Rod PWA — strawberry person on pastel blue (same art as Belle icon, Rod sky). */
+export const ROD_HOMESCREEN_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="rodHomescreenBlue" x1="256" y1="0" x2="256" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d4eaf8"/>
+      <stop stop-color="#b8dcf0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#rodHomescreenBlue)"/>
   <g transform="translate(256 300) scale(2.55)">${STRAWBERRY}</g>
   <g transform="translate(256 252) scale(5.6) translate(-24 -24)">${BELLE_BEAR_AVATAR}</g>
   <g transform="translate(138 148) scale(1.45)">
