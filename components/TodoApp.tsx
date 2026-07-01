@@ -10,7 +10,7 @@ import SortableTodoList from "@/components/SortableTodoList";
 import type { TodoUpdates } from "@/components/TodoItem";
 import RodAvatar from "@/components/RodAvatar";
 import RodCelebrationAvatar from "@/components/RodCelebrationAvatar";
-import BottomNav from "@/components/BottomNav";
+import AppShell from "@/components/AppShell";
 import WeatherForecast from "@/components/WeatherForecast";
 import ReminderPrompt, { ReminderToggle } from "@/components/ReminderPrompt";
 import { useDueReminders } from "@/hooks/useDueReminders";
@@ -403,7 +403,8 @@ export default function TodoApp() {
     ];
 
   return (
-    <div className="safe-px safe-pt relative min-h-dvh overflow-x-hidden pb-24">
+    <AppShell>
+    <div className="safe-px safe-pt relative overflow-x-hidden">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="animate-float-slow absolute -left-20 top-10 h-56 w-56 rounded-full bg-accent-soft/60 blur-3xl" />
         <div className="animate-float-slower absolute -right-16 bottom-20 h-64 w-64 rounded-full bg-mint/70 blur-3xl" />
@@ -651,8 +652,7 @@ export default function TodoApp() {
           )}
         </section>
       </main>
-
-      <BottomNav />
     </div>
+    </AppShell>
   );
 }

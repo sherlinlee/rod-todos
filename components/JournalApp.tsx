@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import RodAvatar from "@/components/RodAvatar";
-import BottomNav from "@/components/BottomNav";
+import AppShell from "@/components/AppShell";
 import CrossIcon from "@/components/CrossIcon";
 import JournalArchive from "@/components/JournalArchive";
 import MicButton from "@/components/MicButton";
@@ -254,7 +254,8 @@ export default function JournalApp() {
   }
 
   return (
-    <div className="safe-px safe-pt relative min-h-dvh overflow-x-hidden pb-24">
+    <AppShell>
+    <div className="safe-px safe-pt relative overflow-x-hidden">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="animate-float-slow absolute -left-20 top-10 h-48 w-48 rounded-full bg-lavender/50 blur-3xl" />
         <div className="animate-float-slower absolute -right-16 top-1/3 h-56 w-56 rounded-full bg-mint/60 blur-3xl" />
@@ -396,8 +397,7 @@ export default function JournalApp() {
           onSelectDate={editFromArchive}
         />
       </main>
-
-      <BottomNav />
     </div>
+    </AppShell>
   );
 }

@@ -32,7 +32,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
   themeColor: "#eaf4fc",
 };
 
@@ -46,7 +49,7 @@ export default function RootLayout({
       lang="en"
       className={`${nunito.variable} ${bangers.variable} h-full antialiased`}
     >
-      <body className="min-h-dvh overflow-x-hidden flex flex-col">
+      <body className="overflow-x-hidden flex flex-col">
         {children}
       </body>
     </html>

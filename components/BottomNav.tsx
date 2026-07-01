@@ -21,6 +21,7 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
+              scroll={false}
               className={`flex flex-1 items-center justify-center gap-1 rounded-2xl py-2.5 text-xs font-bold transition active:scale-[0.98] sm:gap-1.5 sm:text-sm ${
                 active
                   ? "bg-accent text-white shadow-sm"
