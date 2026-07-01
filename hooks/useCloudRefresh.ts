@@ -5,7 +5,9 @@ import { flushPendingCloudPush, refreshFromCloud } from "@/lib/sync-client";
 
 const POLL_INTERVAL_MS = 8_000;
 
-export function useCloudRefresh(onRefresh: (data: Awaited<ReturnType<typeof refreshFromCloud>>) => void) {
+export function useCloudRefresh(
+  onRefresh: (data: Awaited<ReturnType<typeof refreshFromCloud>>) => void,
+) {
   useEffect(() => {
     function handleRefresh() {
       if (document.visibilityState !== "visible") return;

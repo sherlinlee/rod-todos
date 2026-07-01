@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, startTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import AddTodoForm from "@/components/AddTodoForm";
 import CelebrationToast from "@/components/CelebrationToast";
 import CompletionFlash from "@/components/CompletionFlash";
@@ -8,41 +8,41 @@ import ConfettiBurst from "@/components/ConfettiBurst";
 import EssentialsStrip from "@/components/EssentialsStrip";
 import SortableTodoList from "@/components/SortableTodoList";
 import type { TodoUpdates } from "@/components/TodoItem";
-import RodAvatar from "@/components/RodAvatar";
-import RodCelebrationAvatar from "@/components/RodCelebrationAvatar";
-import AppShell from "@/components/AppShell";
+import SiteAvatar from "@/components/SiteAvatar";
+import CelebrationAvatar from "@/components/CelebrationAvatar";
+import BottomNav from "@/components/BottomNav";
 import WeatherForecast from "@/components/WeatherForecast";
-import ReminderPrompt, { ReminderToggle } from "@/components/ReminderPrompt";
-import { useDueReminders } from "@/hooks/useDueReminders";
-import { CATEGORIES } from "@/lib/categories";
-import { allDoneEncouragement, pickAllDoneCompliment, pickEncouragement } from "@/lib/encouragements";
+import PushNotificationToggle from "@/components/PushNotificationToggle";
+import { getCategories } from "@/lib/categories";
+import { allDoneEncouragement, ALL_DONE_WITH_TODAYS_LIST, pickAllDoneCompliment, pickEncouragement } from "@/lib/encouragements";
+import { isTodoDueToday } from "@/lib/dates";
 import { hapticComplete } from "@/lib/haptics";
 import {
   allEssentialsDoneToday,
   completePermanentTodo,
+  ensureEssentials,
   isPermanentTodo,
   isRegularTodo,
   pendingEssentials,
   uncompletePermanentTodo,
 } from "@/lib/essentials";
 import { migrateTodos, reorderTodos, sortByDueDate } from "@/lib/migrate";
-import { mergeSyncData, hasUserTodos } from "@/lib/sync-merge";
+import { mergeSyncData } from "@/lib/sync-merge";
+import {
+  remainingTodayRegularCount,
+  todayRegularTodos,
+} from "@/lib/today-scope";
+import { formatSiteDecor, getSiteConfig } from "@/lib/site";
 import { useCloudRefresh } from "@/hooks/useCloudRefresh";
 import {
   hydrateFromCloud,
-  buildLocalSnapshot,
-  readLocalTodos,
   readLocalIdeas,
   readLocalJournal,
-  readLocalTombstones,
-  recordTombstone,
   refreshFromCloud,
   scheduleCloudPush,
-  todoTombstoneKey,
   writeLocalIdeas,
   writeLocalJournal,
   writeLocalTodos,
-  writeLocalTombstones,
 } from "@/lib/sync-client";
 import type {
   Category,
@@ -52,14 +52,7 @@ import type {
 } from "@/lib/types";
 
 function createId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-}
-
-function touchTodo(todo: Todo): Todo {
-  return { ...todo, updatedAt: Date.now() };
+  return crypto.randomUUID();
 }
 
 const CHECK_FEEDBACK_MS = 280;
@@ -73,14 +66,12 @@ type Celebration = {
 
 export default function TodoApp() {
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [bootstrapped, setBootstrapped] = useState(false);
   const [input, setInput] = useState("");
   const [category, setCategory] = useState<Category>("personal");
   const [dueDate, setDueDate] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [hydrated, setHydrated] = useState(false);
-  const [syncReady, setSyncReady] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [completionFlash, setCompletionFlash] = useState<{
@@ -93,22 +84,11 @@ export default function TodoApp() {
     expectedCompleted: boolean;
     at: number;
   } | null>(null);
-  const lastAddRef = useRef(0);
   const todosRef = useRef<Todo[]>([]);
-  const [showReminderPrompt, setShowReminderPrompt] = useState(false);
-  const [reminderDueDate, setReminderDueDate] = useState<string | null>(null);
-  const reminders = useDueReminders();
 
   useEffect(() => {
     todosRef.current = todos;
   }, [todos]);
-
-  useLayoutEffect(() => {
-    const local = readLocalTodos();
-    todosRef.current = local;
-    setTodos(local);
-    setBootstrapped(true);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,13 +98,10 @@ export default function TodoApp() {
         const data = await hydrateFromCloud();
         if (!cancelled) {
           setTodos(data.todos);
-          setSyncReady(true);
         }
       } catch {
         if (!cancelled) {
-          const local = readLocalTodos();
-          todosRef.current = local;
-          setTodos(local);
+          setTodos(ensureEssentials([]));
         }
       } finally {
         if (!cancelled) setHydrated(true);
@@ -140,16 +117,13 @@ export default function TodoApp() {
   const onCloudRefresh = useCallback(
     (cloud: Awaited<ReturnType<typeof refreshFromCloud>>) => {
       if (!cloud) return;
-      if (lastAddRef.current && Date.now() - lastAddRef.current < 4000) {
-        return;
-      }
-      const localSnapshot = buildLocalSnapshot();
-      if (hasUserTodos(localSnapshot)) {
-        localSnapshot.updatedAt = Math.max(
-          localSnapshot.updatedAt,
-          Date.now(),
-        );
-      }
+
+      const localSnapshot = {
+        todos: todosRef.current,
+        ideas: readLocalIdeas(),
+        journal: readLocalJournal(),
+        updatedAt: Date.now(),
+      };
       const merged = mergeSyncData(localSnapshot, cloud);
       const last = lastToggleRef.current;
       const localTodo = last
@@ -158,6 +132,7 @@ export default function TodoApp() {
       const mergedTodo = last
         ? merged.todos.find((t) => t.id === last.id)
         : undefined;
+
       if (
         last != null &&
         Date.now() - last.at < 3000 &&
@@ -166,12 +141,11 @@ export default function TodoApp() {
       ) {
         return;
       }
-      todosRef.current = merged.todos;
+
       setTodos(merged.todos);
       writeLocalTodos(merged.todos);
       writeLocalIdeas(merged.ideas);
-      writeLocalJournal(merged.journal);
-      writeLocalTombstones(merged.tombstones ?? []);
+      writeLocalJournal(merged.journal ?? []);
     },
     [],
   );
@@ -179,19 +153,18 @@ export default function TodoApp() {
   useCloudRefresh(onCloudRefresh);
 
   useEffect(() => {
-    if (!hydrated || !syncReady) return;
+    if (!hydrated) return;
     const handle = window.setTimeout(() => {
       writeLocalTodos(todos);
       scheduleCloudPush(() => ({
         todos,
         ideas: readLocalIdeas(),
         journal: readLocalJournal(),
-        tombstones: readLocalTombstones(),
         updatedAt: Date.now(),
       }));
     }, 0);
     return () => window.clearTimeout(handle);
-  }, [todos, hydrated, syncReady]);
+  }, [todos, hydrated]);
 
   const sortedTodos = useMemo(() => sortByDueDate(todos), [todos]);
 
@@ -229,25 +202,31 @@ export default function TodoApp() {
   const completedCount = regularTodos.filter((t) => t.completed).length;
   const ritualCount = pendingRituals.length;
 
+  const todayTodos = useMemo(
+    () => todayRegularTodos(regularTodos),
+    [regularTodos],
+  );
+  const todayActiveCount = todayTodos.filter(
+    (t) => !t.completed || completingId === t.id,
+  ).length;
+  const allDoneForToday =
+    todayTodos.length > 0 && todayActiveCount === 0;
+
   useEffect(() => {
-    if (!bootstrapped || !hydrated) return;
-    if (activeCount === 0 && regularTodos.length > 0) {
+    if (!hydrated) return;
+    if (allDoneForToday) {
       setAllDoneCompliment((current) => current ?? pickAllDoneCompliment());
     } else {
       setAllDoneCompliment(null);
     }
-  }, [bootstrapped, hydrated, activeCount, regularTodos.length]);
+  }, [hydrated, allDoneForToday]);
 
   const dismissCelebration = useCallback(() => setCelebration(null), []);
   const dismissCompletionFlash = useCallback(() => setCompletionFlash(null), []);
 
-  function remainingRegularCount(list: Todo[]) {
-    return list.filter(isRegularTodo).filter((t) => !t.completed).length;
-  }
-
-  function celebrate(wasLastOne: boolean) {
-    const picked = wasLastOne ? allDoneEncouragement() : pickEncouragement();
-    if (wasLastOne) {
+  function celebrate(wasAllDoneForToday: boolean) {
+    const picked = wasAllDoneForToday ? allDoneEncouragement() : pickEncouragement();
+    if (wasAllDoneForToday) {
       setAllDoneCompliment(picked.message);
       setCelebration({
         ...picked,
@@ -264,52 +243,32 @@ export default function TodoApp() {
     if (!text) return;
 
     const maxOrder = todos.reduce((max, t) => Math.max(max, t.order), -1);
-    const now = Date.now();
-    const newTodo: Todo = {
-      id: createId(),
-      text,
-      completed: false,
-      createdAt: now,
-      updatedAt: now,
-      dueDate: dueDate || null,
-      category,
-      order: maxOrder + 1,
-    };
-    const next = [...todos, newTodo];
 
-    lastAddRef.current = now;
-    todosRef.current = next;
-    writeLocalTodos(next);
-    setTodos(next);
+    setTodos((prev) => [
+      ...prev,
+      {
+        id: createId(),
+        text,
+        completed: false,
+        createdAt: Date.now(),
+        dueDate: dueDate || null,
+        category,
+        order: maxOrder + 1,
+      },
+    ]);
     setInput("");
     setDueDate("");
-    setStatusFilter("active");
-    if (categoryFilter !== "all" && categoryFilter !== category) {
-      setCategoryFilter("all");
-    }
-    scheduleCloudPush(() => ({
-      todos: next,
-      ideas: readLocalIdeas(),
-      journal: readLocalJournal(),
-      tombstones: readLocalTombstones(),
-      updatedAt: now,
-    }));
-
-    if (dueDate && reminders.status !== "subscribed") {
-      setReminderDueDate(dueDate);
-      setShowReminderPrompt(true);
-    }
   }
 
   function toggleTodo(id: string) {
     const target = todos.find((t) => t.id === id);
-    if (!target) return;
+    if (!target || completingId === id) return;
 
     if (target.permanent) {
       if (target.completed) {
         setTodos((prev) =>
           prev.map((t) =>
-            t.id === id ? touchTodo(uncompletePermanentTodo(t)) : t,
+            t.id === id ? uncompletePermanentTodo(t) : t,
           ),
         );
         return;
@@ -321,7 +280,7 @@ export default function TodoApp() {
       window.setTimeout(() => {
         setTodos((prev) =>
           prev.map((t) =>
-            t.id === id ? touchTodo(completePermanentTodo(t)) : t,
+            t.id === id ? completePermanentTodo(t) : t,
           ),
         );
         window.setTimeout(() => setCompletingId(null), COMPLETE_FLY_MS);
@@ -331,7 +290,7 @@ export default function TodoApp() {
 
     if (target.completed) {
       setTodos((prev) =>
-        prev.map((t) => (t.id === id ? touchTodo({ ...t, completed: false }) : t)),
+        prev.map((t) => (t.id === id ? { ...t, completed: false } : t)),
       );
       return;
     }
@@ -339,25 +298,24 @@ export default function TodoApp() {
     setCompletingId(id);
     lastToggleRef.current = { id, expectedCompleted: true, at: Date.now() };
     hapticComplete();
-    const wasLastOne =
-      remainingRegularCount(
+    const wasAllDoneForToday =
+      isTodoDueToday(target) &&
+      remainingTodayRegularCount(
         todos.map((t) => (t.id === id ? { ...t, completed: true } : t)),
       ) === 0;
 
     window.setTimeout(() => {
       setTodos((prev) =>
-        prev.map((t) =>
-          t.id === id ? touchTodo({ ...t, completed: true }) : t,
-        ),
+        prev.map((t) => (t.id === id ? { ...t, completed: true } : t)),
       );
 
-      if (!wasLastOne) {
+      if (!wasAllDoneForToday) {
         startTransition(() => celebrate(false));
       }
 
       window.setTimeout(() => {
         setCompletingId(null);
-        if (wasLastOne) {
+        if (wasAllDoneForToday) {
           startTransition(() => celebrate(true));
         }
       }, COMPLETE_FLY_MS);
@@ -365,7 +323,6 @@ export default function TodoApp() {
   }
 
   function deleteTodo(id: string) {
-    recordTombstone(todoTombstoneKey(id));
     setTodos((prev) =>
       prev.filter((t) => t.id !== id || isPermanentTodo(t)),
     );
@@ -376,19 +333,14 @@ export default function TodoApp() {
     if (!target || isPermanentTodo(target)) return;
 
     setTodos((prev) =>
-      prev.map((t) => (t.id === id ? touchTodo({ ...t, ...updates }) : t)),
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     );
   }
 
   function clearCompleted() {
-    setTodos((prev) => {
-      for (const todo of prev) {
-        if (todo.completed && !isPermanentTodo(todo)) {
-          recordTombstone(todoTombstoneKey(todo.id));
-        }
-      }
-      return prev.filter((t) => !t.completed || isPermanentTodo(t));
-    });
+    setTodos((prev) =>
+      prev.filter((t) => !t.completed || isPermanentTodo(t)),
+    );
   }
 
   function handleReorder(activeId: string, overId: string) {
@@ -402,9 +354,10 @@ export default function TodoApp() {
       { key: "all", label: "All", count: regularTodos.length },
     ];
 
+  const site = getSiteConfig();
+
   return (
-    <AppShell>
-    <div className="safe-px safe-pt relative overflow-x-hidden">
+    <div className="safe-px safe-pt relative min-h-full overflow-x-hidden pb-24">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="animate-float-slow absolute -left-20 top-10 h-56 w-56 rounded-full bg-accent-soft/60 blur-3xl" />
         <div className="animate-float-slower absolute -right-16 bottom-20 h-64 w-64 rounded-full bg-mint/70 blur-3xl" />
@@ -416,72 +369,58 @@ export default function TodoApp() {
       <main className="relative mx-auto w-full max-w-lg pb-2 pt-2 sm:pt-4">
         <header className="mb-5 text-center sm:mb-8">
           <p className="mb-1.5 text-xs font-semibold tracking-wide text-accent sm:mb-2 sm:text-sm">
-            ⚡ rod&apos;s hangout ⚡
+            {formatSiteDecor(site.homeTagline, site.homeAvatarEmoji)}
           </p>
-          <h1 className="font-[family-name:var(--font-bangers)] text-[2.25rem] leading-tight tracking-wide text-foreground sm:text-5xl">
+          <h1 className="text-[2rem] font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl">
             to-do(s)
           </h1>
           <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-sm text-foreground/70 sm:mt-3 sm:text-base">
-            <span>one thing at a time. you got this, rod</span>
-            <RodAvatar size={34} />
+            <span>{site.homeSubtitle}</span>
+            <SiteAvatar size={34} />
           </p>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:mt-5">
-            {bootstrapped && (
-              <>
-                <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-accent-soft/50 bg-card/90 px-3.5 py-2 text-xs font-semibold text-foreground/75 shadow-sm backdrop-blur-sm sm:px-4 sm:text-sm">
-                  <span
-                    className={`text-lg leading-none ${
-                      activeCount === 0 ? "" : "animate-bolt-sparkle"
-                    }`}
-                    aria-hidden
-                  >
-                    {activeCount === 0 ? "✓" : "⚡"}
-                  </span>
-                  <p>
-                    {activeCount === 0
-                      ? "All clear — nice work!"
-                      : `${activeCount} quest${activeCount === 1 ? "" : "s"} left`}
-                  </p>
-                </div>
+            <div className="inline-flex max-w-full items-center gap-2.5 rounded-full border-2 border-accent-soft/50 bg-card/80 px-3.5 py-2 shadow-sm backdrop-blur-sm sm:gap-3 sm:px-4">
+              <span className="animate-float-gentle text-2xl" aria-hidden>
+                ⚡
+              </span>
+              <p className="text-xs font-semibold text-foreground/75 sm:text-sm">
+                {allDoneForToday
+                  ? ALL_DONE_WITH_TODAYS_LIST
+                  : todayTodos.length > 0
+                    ? `${todayActiveCount} for today left`
+                    : activeCount === 0
+                      ? "All tucked into their boxes!"
+                      : `${activeCount} bit${activeCount === 1 ? "" : "s"} left`}
+              </p>
+            </div>
 
-                {ritualCount > 0 && (
-                  <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-accent-soft/50 bg-card/90 px-3.5 py-2 text-xs font-semibold text-foreground/75 shadow-sm backdrop-blur-sm sm:px-4 sm:text-sm">
-                    <span
-                      className="text-lg leading-none animate-bolt-sparkle"
-                      aria-hidden
-                    >
-                      ⭐
-                    </span>
-                    <p>
-                      {ritualCount} ritual{ritualCount === 1 ? "" : "s"} left
-                    </p>
-                  </div>
-                )}
+            {ritualCount > 0 && (
+              <div className="inline-flex max-w-full items-center gap-2.5 rounded-full border-2 border-accent-soft/50 bg-card/80 px-3.5 py-2 shadow-sm backdrop-blur-sm sm:gap-3 sm:px-4">
+                <span className="animate-float-gentle text-xl" aria-hidden>
+                  ⭐
+                </span>
+                <p className="text-xs font-semibold text-foreground/75 sm:text-sm">
+                  {ritualCount} ritual{ritualCount === 1 ? "" : "s"} left
+                </p>
+              </div>
+            )}
 
-                {ritualsDone && ritualCount === 0 && (
-                  <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/30 bg-background/60 px-3.5 py-2 text-xs font-semibold text-foreground/45">
-                    rituals done ✓
-                  </div>
-                )}
-
-                <ReminderToggle
-                  status={reminders.status}
-                  busy={reminders.busy}
-                  onEnable={() => void reminders.enable()}
-                  onDisable={() => void reminders.disable()}
-                />
-              </>
+            {ritualsDone && ritualCount === 0 && (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-accent-soft/30 bg-background/60 px-3 py-1.5 text-[11px] font-semibold text-foreground/45">
+                rituals done ✓
+              </div>
             )}
           </div>
         </header>
 
-        <div className="mb-4 sm:mb-5">
+        <div className="mb-3 sm:mb-4">
           <WeatherForecast />
         </div>
 
-        <section className="section-add mb-4 rounded-2xl border border-accent/10 p-3.5 shadow-[0_8px_24px_var(--shadow)] sm:p-4">
-          <p className="section-label mb-3">✏️ New task</p>
+        <PushNotificationToggle />
+
+        <section className="rounded-2xl border border-panel bg-card/90 p-3 shadow-[0_12px_40px_var(--shadow)] backdrop-blur-sm sm:p-4">
           <AddTodoForm
             input={input}
             category={category}
@@ -491,36 +430,10 @@ export default function TodoApp() {
             onDueDateChange={setDueDate}
             onSubmit={addTodo}
           />
-          {showReminderPrompt && (
-            <ReminderPrompt
-              status={reminders.status}
-              busy={reminders.busy}
-              dueDateLabel={
-                reminderDueDate
-                  ? new Date(`${reminderDueDate}T12:00:00`).toLocaleDateString(
-                      undefined,
-                      { weekday: "short", month: "short", day: "numeric" },
-                    )
-                  : undefined
-              }
-              onEnable={() => {
-                void reminders.enable().then((result) => {
-                  if (result === "granted") setShowReminderPrompt(false);
-                });
-              }}
-              onDismiss={() => setShowReminderPrompt(false)}
-            />
-          )}
-        </section>
 
-        <section className="section-list rounded-2xl border border-accent-soft/25 p-3.5 shadow-[0_8px_24px_var(--shadow)] sm:p-4">
-          <p className="section-label mb-3">📋 Your quests</p>
+          <div className="my-4 border-t border-accent-soft/40 sm:my-5" />
 
-          <div className="filter-bar mb-3 space-y-2 sm:mb-4">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-foreground/40">
-              Status
-            </p>
-            <div className="scroll-chips -mx-0.5 flex gap-2 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible">
+          <div className="scroll-chips -mx-0.5 mb-3 flex gap-2 overflow-x-auto pb-0.5 sm:mb-4 sm:flex-wrap sm:overflow-visible">
             {filterButtons.map(({ key, label, count }) => (
               <button
                 key={key}
@@ -528,8 +441,8 @@ export default function TodoApp() {
                 onClick={() => setStatusFilter(key)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-95 sm:text-sm ${
                   statusFilter === key
-                    ? "bg-accent text-white shadow-sm"
-                    : "bg-white text-foreground/65 ring-1 ring-accent/8 active:bg-accent-soft/15"
+                    ? "bg-lavender text-foreground shadow-sm dark:bg-accent-soft/40 dark:shadow-none"
+                    : "bg-background text-foreground/60 active:bg-accent-soft/30 dark:text-foreground/65"
                 }`}
               >
                 {label}
@@ -538,44 +451,40 @@ export default function TodoApp() {
                 )}
               </button>
             ))}
-            </div>
+          </div>
 
-            <p className="text-[10px] font-bold uppercase tracking-wide text-foreground/40">
-              Box
-            </p>
-            <div className="scroll-chips -mx-0.5 flex gap-2 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible">
+          <div className="scroll-chips -mx-0.5 mb-3 flex gap-2 overflow-x-auto pb-0.5 sm:mb-4 sm:flex-wrap sm:overflow-visible">
             <button
               type="button"
               onClick={() => setCategoryFilter("all")}
               className={`shrink-0 rounded-full px-3 py-2 text-xs font-bold transition active:scale-95 ${
                 categoryFilter === "all"
-                  ? "bg-kraft text-foreground shadow-sm ring-1 ring-accent/10"
-                  : "bg-white text-foreground/60 ring-1 ring-accent/8 active:bg-kraft/80"
+                  ? "bg-kraft text-foreground shadow-sm dark:bg-accent-soft/35"
+                  : "bg-background text-foreground/55 active:bg-kraft/60 dark:text-foreground/65"
               }`}
             >
               📦 All boxes
             </button>
-            {CATEGORIES.map((cat) => (
+            {getCategories().map((cat) => (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => setCategoryFilter(cat.id)}
                 className={`shrink-0 rounded-full px-3 py-2 text-xs font-bold transition active:scale-95 ${
                   categoryFilter === cat.id
-                    ? `${cat.pill} ring-1 ring-accent-soft/40`
-                    : "bg-white text-foreground/60 ring-1 ring-accent/8 active:bg-accent-soft/10"
+                    ? `${cat.pill} ring-2 ring-surface dark:ring-card`
+                    : "bg-background text-foreground/55 active:bg-accent-soft/25 dark:text-foreground/65"
                 }`}
               >
                 {cat.emoji} {cat.boxLabel}
               </button>
             ))}
-            </div>
           </div>
 
           {!hydrated ? (
             <p className="py-10 text-center text-foreground/50">Loading…</p>
           ) : filteredTodos.length === 0 ? (
-            <div className="flex min-h-[10rem] flex-col items-center justify-center rounded-xl border border-accent-soft/20 bg-paper px-3 py-10 text-center sm:px-4 sm:py-12">
+            <div className="flex min-h-[10rem] flex-col items-center justify-center rounded-2xl bg-background/70 px-3 py-10 text-center sm:px-4 sm:py-12">
               {celebration && statusFilter === "active" ? (
                 <CelebrationToast
                   message={celebration.message}
@@ -585,25 +494,31 @@ export default function TodoApp() {
                 <>
                   {statusFilter === "active" ? (
                     <div className="flex justify-center">
-                      <RodCelebrationAvatar size={100} />
+                      <CelebrationAvatar size={100} />
                     </div>
                   ) : (
-                    <p className="animate-float-gentle text-3xl">
-                      {statusFilter === "completed" ? "💪" : "📋"}
-                    </p>
+                    <p className="animate-float-gentle text-3xl">{site.emptyCompletedEmoji}</p>
                   )}
                   <p className="mt-3 text-sm font-semibold leading-relaxed text-foreground/80 sm:text-base">
                     {statusFilter === "completed"
                       ? "Nothing checked off yet — you've got this!"
                       : statusFilter === "active"
-                        ? allDoneCompliment ?? "All caught up — nice one, Rod."
-                        : "Nothing in the list yet — add a task above."}
+                        ? allDoneCompliment ?? ALL_DONE_WITH_TODAYS_LIST
+                        : "Your box is empty. Add something sweet above."}
                   </p>
                 </>
               )}
             </div>
           ) : (
             <div className="relative pb-2">
+              {allDoneForToday && statusFilter === "active" && (
+                <div className="mb-3 flex flex-col items-center rounded-2xl bg-background/70 px-3 py-4 text-center">
+                  <CelebrationAvatar size={72} />
+                  <p className="mt-2 text-sm font-semibold text-foreground/80">
+                    {allDoneCompliment ?? ALL_DONE_WITH_TODAYS_LIST}
+                  </p>
+                </div>
+              )}
               <SortableTodoList
                 todos={filteredTodos}
                 completingId={completingId}
@@ -625,7 +540,7 @@ export default function TodoApp() {
           )}
 
           {hydrated && pendingRituals.length > 0 && (
-            <div className="mt-4 rounded-xl border border-accent-soft/20 bg-paper p-2.5 pt-3">
+            <div className="mt-4 border-t border-accent-soft/30 pt-3">
               <EssentialsStrip
                 todos={pendingRituals}
                 completingId={completingId}
@@ -637,14 +552,16 @@ export default function TodoApp() {
           {completedCount > 0 && (
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-accent-soft/40 pt-3.5 text-sm sm:mt-5 sm:pt-4">
               <span className="min-w-0 text-xs text-foreground/60 sm:text-sm">
-                {activeCount === 0
-                  ? "All clear ✓"
-                  : `${activeCount} quest${activeCount === 1 ? "" : "s"} left`}
+                {allDoneForToday
+                  ? `${ALL_DONE_WITH_TODAYS_LIST} ✓`
+                  : activeCount === 0
+                    ? site.allDoneFooter
+                    : `${activeCount} left to go`}
               </span>
               <button
                 type="button"
                 onClick={clearCompleted}
-                className="touch-target shrink-0 font-semibold text-accent transition active:text-accent-soft"
+                className="touch-target shrink-0 font-semibold text-accent transition active:text-accent-deep"
               >
                 Clear done
               </button>
@@ -652,7 +569,8 @@ export default function TodoApp() {
           )}
         </section>
       </main>
+
+      <BottomNav />
     </div>
-    </AppShell>
   );
 }

@@ -1,22 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import EntryActionButtons from "@/components/EntryActionButtons";
+import { formatNoteDate, formatNoteTime } from "@/lib/dates";
 import type { JournalYearGroup } from "@/lib/journal";
-import { formatJournalDate } from "@/lib/verses";
 
-type JournalArchiveProps = {
+type NotesArchiveProps = {
   archive: JournalYearGroup[];
   totalSaved: number;
   today: string;
-  onSelectDate?: (date: string) => void;
+  activeNoteId?: string | null;
+  editingText?: string;
+  onSelectNote?: (id: string) => void;
+  onCopyNote?: (text: string) => void;
+  onDeleteNote?: (id: string) => void;
 };
 
-export default function JournalArchive({
+const archivePillClass =
+  "inline-flex items-center gap-1 rounded-full bg-accent-soft/45 px-2.5 py-1 text-[10px] font-bold text-accent";
+
+export default function NotesArchive({
   archive,
   totalSaved,
   today,
-  onSelectDate,
-}: JournalArchiveProps) {
+  activeNoteId,
+  editingText,
+  onSelectNote,
+  onCopyNote,
+  onDeleteNote,
+}: NotesArchiveProps) {
   const [open, setOpen] = useState(totalSaved > 0);
   const [expandedYears, setExpandedYears] = useState<Set<number>>(() => {
     const first = archive[0]?.year;
@@ -50,17 +62,17 @@ export default function JournalArchive({
     });
   }
 
-  function toggleEntry(date: string) {
+  function toggleEntry(id: string) {
     setExpandedEntries((prev) => {
       const next = new Set(prev);
-      if (next.has(date)) next.delete(date);
-      else next.add(date);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
 
   return (
-    <section className="mt-3 rounded-[1.25rem] border border-white/80 bg-card/90 p-3 shadow-[0_12px_32px_var(--shadow)] backdrop-blur-sm sm:p-4">
+    <section className="mt-3 rounded-[1.25rem] border border-panel bg-card/90 p-3 shadow-[0_12px_32px_var(--shadow)] backdrop-blur-sm sm:p-4">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -68,12 +80,12 @@ export default function JournalArchive({
       >
         <div>
           <span className="block text-xs font-bold uppercase tracking-wide text-foreground/55">
-            your journal
+            your notes
           </span>
           <span className="mt-0.5 block text-[10px] font-semibold text-foreground/40">
             {totalSaved > 0
-              ? `${totalSaved} ${totalSaved === 1 ? "day" : "days"} · tap to read or edit`
-              : "past days show up here as you write"}
+              ? `${totalSaved} ${totalSaved === 1 ? "note" : "notes"} · tap to read or edit`
+              : "past notes show up here as you write"}
           </span>
         </div>
         <span className="text-sm text-foreground/45">{open ? "▾" : "▸"}</span>
@@ -82,12 +94,12 @@ export default function JournalArchive({
       {open && (
         <div className="mt-3 border-t border-accent-soft/35 pt-3">
           {archive.length === 0 ? (
-            <div className="rounded-xl bg-paper px-3 py-6 text-center">
+            <div className="rounded-xl bg-background/70 px-3 py-6 text-center">
               <p className="text-sm font-semibold text-foreground/55">
-                nothing written yet
+                no notes yet
               </p>
               <p className="mt-1 text-xs text-foreground/40">
-                each day you reflect, it&apos;s saved here in the app
+                notes you write show up here
               </p>
             </div>
           ) : (
@@ -102,7 +114,7 @@ export default function JournalArchive({
                 return (
                   <div
                     key={year}
-                    className="rounded-xl border border-accent-soft/35 bg-paper/80"
+                    className="rounded-xl border border-accent-soft/35 bg-background/50"
                   >
                     <button
                       type="button"
@@ -113,7 +125,7 @@ export default function JournalArchive({
                         {year}
                       </span>
                       <span className="text-[10px] font-semibold text-foreground/45">
-                        {monthCount} {monthCount === 1 ? "entry" : "entries"}{" "}
+                        {monthCount} {monthCount === 1 ? "note" : "notes"}{" "}
                         {yearOpen ? "▾" : "▸"}
                       </span>
                     </button>
@@ -129,14 +141,14 @@ export default function JournalArchive({
                               <button
                                 type="button"
                                 onClick={() => toggleMonth(monthKey)}
-                                className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-white/50"
+                                className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left hover:bg-surface/50"
                               >
                                 <span className="text-xs font-bold text-foreground/60">
                                   {group.label}
                                 </span>
                                 <span className="text-[10px] font-semibold text-foreground/40">
                                   {group.entries.length}{" "}
-                                  {group.entries.length === 1 ? "day" : "days"}{" "}
+                                  {group.entries.length === 1 ? "note" : "notes"}{" "}
                                   {monthOpen ? "▾" : "▸"}
                                 </span>
                               </button>
@@ -145,57 +157,63 @@ export default function JournalArchive({
                                 <ul className="mt-1 space-y-1.5 pl-1">
                                   {group.entries.map((entry) => {
                                     const entryOpen = expandedEntries.has(
-                                      entry.date,
+                                      entry.id,
                                     );
+                                    const isActive = entry.id === activeNoteId;
+                                    const displayText =
+                                      isActive && editingText !== undefined
+                                        ? editingText
+                                        : entry.text;
 
                                     return (
                                       <li
-                                        key={entry.date}
+                                        key={entry.id}
                                         className={`paper-slip rounded-xl border transition ${
-                                          entry.date === today
-                                            ? "border-accent-soft/70"
-                                            : "border-accent-soft/40"
+                                          isActive
+                                            ? "border-accent/50 ring-1 ring-accent/15"
+                                            : entry.date === today
+                                              ? "border-accent-soft/70"
+                                              : "border-accent-soft/40"
                                         }`}
                                       >
                                         <div className="flex items-center justify-between gap-2 px-2.5 pt-2">
-                                          <div className="flex min-w-0 items-center gap-2">
+                                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                                             <p className="text-[10px] font-bold text-foreground/50">
-                                              {formatJournalDate(entry.date)}
+                                              {formatNoteDate(entry.date)}
                                             </p>
+                                            <span className="text-[10px] font-semibold text-foreground/35">
+                                              {formatNoteTime(entry.updatedAt)}
+                                            </span>
                                             {entry.date === today && (
-                                              <span className="rounded-full bg-accent-soft/40 px-1.5 py-0.5 text-[9px] font-bold text-foreground/55">
+                                              <span className="rounded-full bg-accent-soft/50 px-1.5 py-0.5 text-[9px] font-bold text-foreground/55">
                                                 today
                                               </span>
                                             )}
                                           </div>
+                                          <EntryActionButtons
+                                            onEdit={() => onSelectNote?.(entry.id)}
+                                            onCopy={() => onCopyNote?.(displayText)}
+                                            onDelete={() => onDeleteNote?.(entry.id)}
+                                          />
                                         </div>
 
                                         {entryOpen ? (
                                           <div className="px-2.5 pb-2.5 pt-1">
-                                            <div className="max-h-56 overflow-y-auto rounded-lg border border-accent-soft/20 bg-white/80 px-2.5 py-2">
+                                            <div className="max-h-56 overflow-y-auto rounded-lg border border-accent-soft/25 bg-card/90 px-2.5 py-2">
                                               <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/85">
-                                                {entry.text}
+                                                {displayText}
                                               </p>
                                             </div>
                                             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                                               <button
                                                 type="button"
                                                 onClick={() =>
-                                                  toggleEntry(entry.date)
+                                                  toggleEntry(entry.id)
                                                 }
-                                                className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-bold text-accent"
+                                                className={archivePillClass}
                                               >
                                                 Show less
                                                 <span aria-hidden>▾</span>
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() =>
-                                                  onSelectDate?.(entry.date)
-                                                }
-                                                className="text-[11px] font-bold text-accent underline-offset-2 hover:underline"
-                                              >
-                                                Edit entry
                                               </button>
                                             </div>
                                           </div>
@@ -203,15 +221,15 @@ export default function JournalArchive({
                                           <button
                                             type="button"
                                             onClick={() =>
-                                              toggleEntry(entry.date)
+                                              toggleEntry(entry.id)
                                             }
                                             className="w-full px-2.5 pb-2.5 pt-1 text-left"
                                             aria-expanded={false}
                                           >
                                             <p className="line-clamp-2 whitespace-pre-wrap break-words text-sm leading-snug text-foreground/70">
-                                              {entry.text}
+                                              {displayText}
                                             </p>
-                                            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-[10px] font-bold text-accent">
+                                            <span className={`mt-2 ${archivePillClass}`}>
                                               Tap for more
                                               <span aria-hidden>▸</span>
                                             </span>

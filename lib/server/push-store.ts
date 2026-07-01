@@ -1,47 +1,38 @@
 import { get, put } from "@vercel/blob";
+import { getSiteConfig } from "@/lib/site";
 import type {
-  PushSubscriptionRecord,
-  PushSubscriptionStore,
+  PushStoreData,
+  PushSubscriptionPayload,
+  StoredPushSubscription,
 } from "@/lib/push-types";
 
-const BLOB_PATHNAME = "rod-push-subscriptions.json";
-
-function blobConfigured() {
-  return Boolean(
-    process.env.BLOB_READ_WRITE_TOKEN ||
-      (process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN),
-  );
+function blobPathname() {
+  return getSiteConfig().pushBlobName;
 }
 
-export async function loadPushSubscriptions(): Promise<PushSubscriptionStore> {
-  if (!blobConfigured()) {
-    return { subscriptions: [], updatedAt: 0 };
-  }
+function emptyStore(): PushStoreData {
+  return { subscriptions: [] };
+}
 
+export async function loadPushStore(): Promise<PushStoreData> {
   try {
-    const result = await get(BLOB_PATHNAME, { access: "private" });
+    const result = await get(blobPathname(), { access: "private" });
     if (!result || result.statusCode !== 200 || !result.stream) {
-      return { subscriptions: [], updatedAt: 0 };
+      return emptyStore();
     }
 
     const text = await new Response(result.stream).text();
-    const parsed = JSON.parse(text) as PushSubscriptionStore;
-    if (!Array.isArray(parsed.subscriptions)) {
-      return { subscriptions: [], updatedAt: 0 };
-    }
+    const parsed = JSON.parse(text) as PushStoreData;
+    if (!Array.isArray(parsed.subscriptions)) return emptyStore();
     return parsed;
   } catch {
-    return { subscriptions: [], updatedAt: 0 };
+    return emptyStore();
   }
 }
 
-export async function savePushSubscriptions(
-  store: PushSubscriptionStore,
-): Promise<boolean> {
-  if (!blobConfigured()) return false;
-
+async function savePushStore(data: PushStoreData): Promise<boolean> {
   try {
-    await put(BLOB_PATHNAME, JSON.stringify(store), {
+    await put(blobPathname(), JSON.stringify(data), {
       access: "private",
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -53,32 +44,52 @@ export async function savePushSubscriptions(
   }
 }
 
-export async function upsertPushSubscription(
-  record: PushSubscriptionRecord,
-): Promise<boolean> {
-  const store = await loadPushSubscriptions();
-  const next = store.subscriptions.filter(
-    (sub) => sub.endpoint !== record.endpoint,
+function isValidSubscription(
+  value: unknown,
+): value is PushSubscriptionPayload {
+  if (!value || typeof value !== "object") return false;
+  const sub = value as Partial<PushSubscriptionPayload>;
+  return (
+    typeof sub.endpoint === "string" &&
+    sub.endpoint.length > 0 &&
+    !!sub.keys &&
+    typeof sub.keys.p256dh === "string" &&
+    typeof sub.keys.auth === "string"
   );
-  next.push(record);
-  return savePushSubscriptions({
-    subscriptions: next,
-    updatedAt: Date.now(),
-  });
 }
 
-export async function removePushSubscription(
-  endpoint: string,
+export async function upsertPushSubscription(
+  subscription: PushSubscriptionPayload,
+  userAgent?: string,
 ): Promise<boolean> {
-  const store = await loadPushSubscriptions();
-  const next = store.subscriptions.filter((sub) => sub.endpoint !== endpoint);
-  if (next.length === store.subscriptions.length) return true;
-  return savePushSubscriptions({
-    subscriptions: next,
-    updatedAt: Date.now(),
-  });
+  if (!isValidSubscription(subscription)) return false;
+
+  const store = await loadPushStore();
+  const next: StoredPushSubscription = {
+    endpoint: subscription.endpoint,
+    keys: subscription.keys,
+    expirationTime: subscription.expirationTime ?? null,
+    createdAt: Date.now(),
+    userAgent,
+  };
+
+  const without = store.subscriptions.filter(
+    (item) => item.endpoint !== subscription.endpoint,
+  );
+  without.push(next);
+
+  return savePushStore({ subscriptions: without });
 }
 
-export function isPushStorageConfigured() {
-  return blobConfigured();
+export async function removePushSubscription(endpoint: string): Promise<boolean> {
+  if (!endpoint) return false;
+  const store = await loadPushStore();
+  const next = store.subscriptions.filter((item) => item.endpoint !== endpoint);
+  if (next.length === store.subscriptions.length) return true;
+  return savePushStore({ subscriptions: next });
+}
+
+export async function listPushSubscriptions(): Promise<StoredPushSubscription[]> {
+  const store = await loadPushStore();
+  return store.subscriptions.filter(isValidSubscription);
 }

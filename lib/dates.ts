@@ -1,15 +1,41 @@
 export function todayString() {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
-/** Calendar date (YYYY-MM-DD) in a given IANA timezone, e.g. America/New_York */
-export function todayStringInTimezone(timeZone: string) {
+export function todayStringInTimezone(timeZone: string): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+}
+
+export function isTodoDueToday(
+  todo: { dueDate: string | null },
+  today = todayString(),
+) {
+  return todo.dueDate === today;
+}
+
+export function formatNoteDate(iso: string): string {
+  const date = new Date(`${iso}T12:00:00`);
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+export function formatNoteTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function dayBefore(iso: string): string {

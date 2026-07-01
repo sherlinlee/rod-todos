@@ -1,6 +1,6 @@
 import type { Category } from "./types";
 
-export const CATEGORIES: {
+export type CategoryMeta = {
   id: Category;
   label: string;
   boxLabel: string;
@@ -8,30 +8,36 @@ export const CATEGORIES: {
   pill: string;
   boxActive: string;
   boxIdle: string;
-  chipActive: string;
-}[] = [
+};
+
+const categories: CategoryMeta[] = [
   {
     id: "personal",
     label: "Personal",
     boxLabel: "Chill box",
-    emoji: "🏠",
-    pill: "bg-accent-soft/35 text-foreground ring-1 ring-accent-soft/40",
-    boxActive: "border-accent bg-accent/8 ring-2 ring-accent/12",
-    boxIdle: "border-accent-soft/60 bg-paper hover:border-accent/35",
-    chipActive: "bg-accent/10 text-accent ring-1 ring-accent/20",
+    emoji: "☁️",
+    pill: "bg-accent-soft/50 text-foreground",
+    boxActive: "border-accent bg-accent-soft/35 ring-4 ring-accent/15",
+    boxIdle: "border-accent-soft/70 bg-paper hover:border-accent/50",
   },
   {
     id: "work",
     label: "Work",
     boxLabel: "Toolbox",
-    emoji: "🔧",
-    pill: "bg-mint/50 text-foreground ring-1 ring-forest/20",
-    boxActive: "border-forest bg-mint/35 ring-2 ring-forest/15",
-    boxIdle: "border-mint/80 bg-paper hover:border-forest/40",
-    chipActive: "bg-mint/45 text-foreground ring-1 ring-forest/20",
+    emoji: "🔨",
+    pill: "bg-mint/60 text-foreground",
+    boxActive: "border-forest bg-mint/40 ring-4 ring-forest/20",
+    boxIdle: "border-mint bg-paper hover:border-forest/50",
   },
 ];
 
-export function getCategoryMeta(id: Category) {
-  return CATEGORIES.find((c) => c.id === id) ?? CATEGORIES[0];
+export function getCategories(): CategoryMeta[] {
+  return categories;
+}
+
+/** @deprecated use getCategories() */
+export const CATEGORIES = categories;
+
+export function getCategoryMeta(id: Category): CategoryMeta {
+  return getCategories().find((c) => c.id === id) ?? getCategories()[0];
 }

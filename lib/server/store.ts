@@ -1,34 +1,26 @@
 import { get, put } from "@vercel/blob";
-import type { RodSyncData } from "@/lib/sync-types";
+import { getSiteConfig } from "@/lib/site";
+import type { BelleSyncData } from "@/lib/sync-types";
 
-const BLOB_PATHNAME = "rod-sync.json";
-
-function blobConfigured() {
-  return Boolean(
-    process.env.BLOB_READ_WRITE_TOKEN ||
-      (process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN),
-  );
+function blobPathname() {
+  return getSiteConfig().syncBlobName;
 }
 
-export async function loadSyncData(): Promise<RodSyncData | null> {
-  if (!blobConfigured()) return null;
-
+export async function loadSyncData(): Promise<BelleSyncData | null> {
   try {
-    const result = await get(BLOB_PATHNAME, { access: "private" });
+    const result = await get(blobPathname(), { access: "private" });
     if (!result || result.statusCode !== 200 || !result.stream) return null;
 
     const text = await new Response(result.stream).text();
-    return JSON.parse(text) as RodSyncData;
+    return JSON.parse(text) as BelleSyncData;
   } catch {
     return null;
   }
 }
 
-export async function saveSyncData(data: RodSyncData): Promise<boolean> {
-  if (!blobConfigured()) return false;
-
+export async function saveSyncData(data: BelleSyncData): Promise<boolean> {
   try {
-    await put(BLOB_PATHNAME, JSON.stringify(data), {
+    await put(blobPathname(), JSON.stringify(data), {
       access: "private",
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -38,8 +30,4 @@ export async function saveSyncData(data: RodSyncData): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-export function isSyncStorageConfigured() {
-  return blobConfigured();
 }

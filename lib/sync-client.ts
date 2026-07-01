@@ -1,24 +1,27 @@
 import type { Idea } from "@/lib/ideas";
-import { loadJournal, saveJournal, type JournalEntry } from "@/lib/journal";
+import {
+  loadJournal,
+  normalizeJournalEntries,
+  saveJournal,
+  type JournalEntry,
+} from "@/lib/journal";
 import { ensureEssentials } from "@/lib/essentials";
 import { migrateTodos } from "@/lib/migrate";
 import {
   hasUserContent,
+  journalRevision,
   mergeSyncData,
-  needsCloudPush,
 } from "@/lib/sync-merge";
 import {
-  type RodSyncData,
+  type BelleSyncData,
   SYNC_META_KEY,
   type SyncMeta,
-  type SyncTombstone,
 } from "@/lib/sync-types";
 import type { Todo } from "@/lib/types";
 
 const TODOS_KEY = "to-dos-items-v2";
 const LEGACY_TODOS_KEY = "to-dos-items";
 const IDEAS_KEY = "to-dos-ideas";
-const TOMBSTONES_KEY = "rod-sync-tombstones";
 
 export function readLocalTodos(): Todo[] {
   try {
@@ -61,46 +64,6 @@ export function writeLocalJournal(journal: JournalEntry[]) {
   saveJournal(journal);
 }
 
-export function readLocalTombstones(): SyncTombstone[] {
-  try {
-    const raw = localStorage.getItem(TOMBSTONES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as SyncTombstone[];
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (t) => typeof t.key === "string" && typeof t.deletedAt === "number",
-    );
-  } catch {
-    return [];
-  }
-}
-
-export function writeLocalTombstones(tombstones: SyncTombstone[]) {
-  localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(tombstones));
-}
-
-export function recordTombstone(key: string) {
-  const deletedAt = Date.now();
-  const next = [
-    ...readLocalTombstones().filter((t) => t.key !== key),
-    { key, deletedAt },
-  ];
-  writeLocalTombstones(next);
-  writeSyncMeta({ updatedAt: deletedAt });
-}
-
-export function todoTombstoneKey(id: string) {
-  return `todo:${id}`;
-}
-
-export function ideaTombstoneKey(id: string) {
-  return `idea:${id}`;
-}
-
-export function journalTombstoneKey(date: string) {
-  return `journal:${date}`;
-}
-
 function readSyncMeta(): SyncMeta {
   try {
     const raw = localStorage.getItem(SYNC_META_KEY);
@@ -118,23 +81,28 @@ function writeSyncMeta(meta: SyncMeta) {
   localStorage.setItem(SYNC_META_KEY, JSON.stringify(meta));
 }
 
-export async function fetchCloudSync(): Promise<RodSyncData | null> {
+function redirectToLogin() {
+  if (typeof window === "undefined") return;
+  window.location.href = "/login";
+}
+
+export async function fetchCloudSync(): Promise<BelleSyncData | null> {
   try {
-    const res = await fetch("/api/sync", {
-      cache: "no-store",
-      credentials: "include",
-    });
+    const res = await fetch("/api/sync", { cache: "no-store" });
+    if (res.status === 401) {
+      redirectToLogin();
+      return null;
+    }
     if (!res.ok) return null;
     const json = (await res.json()) as {
       ok: boolean;
-      data: RodSyncData | null;
+      data: BelleSyncData | null;
     };
     if (!json.ok || !json.data) return null;
     return {
       todos: ensureEssentials(migrateTodos(json.data.todos)),
       ideas: json.data.ideas,
-      journal: json.data.journal ?? [],
-      tombstones: json.data.tombstones ?? [],
+      journal: normalizeJournalEntries(json.data.journal ?? []),
       updatedAt: json.data.updatedAt,
     };
   } catch {
@@ -142,14 +110,17 @@ export async function fetchCloudSync(): Promise<RodSyncData | null> {
   }
 }
 
-export async function pushCloudSync(data: RodSyncData): Promise<boolean> {
+export async function pushCloudSync(data: BelleSyncData): Promise<boolean> {
   try {
     const res = await fetch("/api/sync", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify(data),
     });
+    if (res.status === 401) {
+      redirectToLogin();
+      return false;
+    }
     if (!res.ok) return false;
     writeSyncMeta({ updatedAt: data.updatedAt });
     return true;
@@ -158,94 +129,93 @@ export async function pushCloudSync(data: RodSyncData): Promise<boolean> {
   }
 }
 
-let pushChain: Promise<boolean> = Promise.resolve(true);
-
-function localRevision(local: RodSyncData): number {
-  return Math.max(readSyncMeta().updatedAt, local.updatedAt);
+export function touchSyncMeta() {
+  writeSyncMeta({ updatedAt: Date.now() });
 }
 
-async function pushCloudSyncMerged(local: RodSyncData): Promise<boolean> {
-  pushChain = pushChain.then(async () => {
-    const cloud = await fetchCloudSync();
-    const revision = localRevision(local);
-    const localWithRevision = { ...local, updatedAt: revision };
-
-    if (!cloud) {
-      const payload = { ...localWithRevision, updatedAt: Date.now() };
-      applyCloudData(payload);
-      return pushCloudSync(payload);
-    }
-
-    const merged = mergeSyncData(localWithRevision, cloud);
-
-    if (!needsCloudPush(merged, cloud)) {
-      return true;
-    }
-
-    const payload = { ...merged, updatedAt: Date.now() };
-    return pushCloudSync(payload);
-  });
-
-  return pushChain;
+export function pushSyncNow(data: BelleSyncData) {
+  if (pushTimer) {
+    clearTimeout(pushTimer);
+    pushTimer = null;
+  }
+  const payload = { ...data, updatedAt: Date.now() };
+  applyCloudData(payload);
+  void pushCloudSync(payload);
 }
 
-export function buildLocalSnapshot(): RodSyncData {
+export function buildLocalSnapshot(): BelleSyncData {
   return {
     todos: readLocalTodos(),
     ideas: readLocalIdeas(),
     journal: readLocalJournal(),
-    tombstones: readLocalTombstones(),
     updatedAt: readSyncMeta().updatedAt,
   };
 }
 
-export function applyCloudData(data: RodSyncData) {
+export function applyCloudData(data: BelleSyncData) {
   writeLocalTodos(data.todos);
   writeLocalIdeas(data.ideas);
   writeLocalJournal(data.journal ?? []);
-  writeLocalTombstones(data.tombstones ?? []);
   writeSyncMeta({ updatedAt: data.updatedAt });
 }
 
-export async function hydrateFromCloud(): Promise<RodSyncData> {
+export async function hydrateFromCloud(): Promise<BelleSyncData> {
   const local = buildLocalSnapshot();
   const cloud = await fetchCloudSync();
 
   if (!cloud) {
     if (hasUserContent(local)) {
-      await pushCloudSyncMerged(local);
-      return buildLocalSnapshot();
+      const seed = { ...local, updatedAt: Date.now() };
+      void pushCloudSync(seed);
     }
     return local;
   }
 
   const merged = mergeSyncData(local, cloud);
   applyCloudData(merged);
-  await pushCloudSyncMerged(buildLocalSnapshot());
+
+  const shouldPush =
+    merged.updatedAt > cloud.updatedAt ||
+    merged.ideas.length !== cloud.ideas.length ||
+    merged.todos.length !== cloud.todos.length ||
+    journalRevision(merged.journal) !== journalRevision(cloud.journal ?? []);
+
+  if (shouldPush) {
+    const payload = { ...merged, updatedAt: Date.now() };
+    applyCloudData(payload);
+    await pushCloudSync(payload);
+  }
 
   return merged;
 }
 
-export async function refreshFromCloud(): Promise<RodSyncData | null> {
-  return fetchCloudSync();
+export async function refreshFromCloud(): Promise<BelleSyncData | null> {
+  const local = buildLocalSnapshot();
+  const cloud = await fetchCloudSync();
+  if (!cloud) return null;
+
+  const merged = mergeSyncData(local, cloud);
+  applyCloudData(merged);
+
+  if (merged.updatedAt > cloud.updatedAt) {
+    const payload = { ...merged, updatedAt: Date.now() };
+    applyCloudData(payload);
+    await pushCloudSync(payload);
+  }
+
+  return merged;
 }
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 
-export function scheduleCloudPush(getData: () => RodSyncData) {
+export function scheduleCloudPush(getData: () => BelleSyncData) {
   if (pushTimer) clearTimeout(pushTimer);
-  const revision = Date.now();
-  writeSyncMeta({ updatedAt: revision });
   pushTimer = setTimeout(() => {
-    pushTimer = null;
+    touchSyncMeta();
     const snapshot = getData();
-    void pushCloudSyncMerged({
-      todos: snapshot.todos,
-      ideas: snapshot.ideas,
-      journal: snapshot.journal ?? [],
-      tombstones: snapshot.tombstones ?? readLocalTombstones(),
-      updatedAt: revision,
-    });
+    const payload = { ...snapshot, updatedAt: Date.now() };
+    applyCloudData(payload);
+    void pushCloudSync(payload);
   }, 700);
 }
 
@@ -254,9 +224,9 @@ export function flushPendingCloudPush() {
     clearTimeout(pushTimer);
     pushTimer = null;
   }
+  touchSyncMeta();
   const snapshot = buildLocalSnapshot();
-  void pushCloudSyncMerged({
-    ...snapshot,
-    updatedAt: Date.now(),
-  });
+  const payload = { ...snapshot, updatedAt: Date.now() };
+  applyCloudData(payload);
+  void pushCloudSync(payload);
 }

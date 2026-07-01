@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getSiteConfig, type WeatherTheme } from "@/lib/site";
 import {
   detectLocation,
   fetchForecast,
@@ -16,48 +17,74 @@ type WeatherState =
   | { status: "ready"; location: WeatherLocation; days: WeatherDay[] }
   | { status: "error" };
 
-function RainPill({ text }: { text: string }) {
-  return (
-    <span className="shrink-0 rounded-full border border-accent-soft/30 bg-card/80 px-2 py-0.5 text-[10px] font-semibold text-foreground/60">
-      {text}
-    </span>
-  );
+function RainPill({ text, theme }: { text: string; theme: WeatherTheme }) {
+  return <span className={theme.rainPill}>{text}</span>;
 }
 
-function HourlyRain({ hours }: { hours: WeatherHour[] }) {
+function HourlyRain({
+  hours,
+  theme,
+  isTomorrow = false,
+}: {
+  hours: WeatherHour[];
+  theme: WeatherTheme;
+  isTomorrow?: boolean;
+}) {
   const now = Date.now();
   const visibleHours = hours.filter(
     (hour) => new Date(hour.time).getTime() >= now - 60 * 60 * 1000,
   );
   const timeline = visibleHours.length > 0 ? visibleHours : hours;
+  const cardClass = isTomorrow ? theme.hourlyTomorrowCard : theme.hourlyTodayCard;
 
   return (
-    <div className="scroll-chips mt-1.5 flex gap-1.5 overflow-x-auto pb-0.5">
+    <div className="scroll-chips mt-1 flex gap-0.5 overflow-x-auto pb-0.5">
       {timeline.map((hour) => (
         <div
           key={hour.time}
-          className="paper-slip flex min-w-[2.75rem] shrink-0 flex-col items-center rounded-xl border border-accent-soft/30 px-1.5 py-1 text-center"
+          className={cardClass}
           title={`${hour.description}, ${hour.probability}% rain, ${hour.precipitation.toFixed(1)}mm`}
         >
-          <p className="text-[10px] font-semibold text-foreground/45">
-            {hour.label}
-          </p>
-          <p className="my-0.5 text-base leading-none" aria-hidden>
-            {hour.emoji}
-          </p>
-          <p className="text-[11px] font-bold text-foreground">
-            {hour.probability}%
-          </p>
-          <p className="text-[9px] font-semibold text-foreground/40">
-            {hour.precipitation.toFixed(1)}mm
-          </p>
+          <p className={theme.hourlyLabel}>{hour.label}</p>
+          <p className="text-xs leading-none">{hour.emoji}</p>
+          <p className={theme.hourlyProb}>{hour.probability}%</p>
+          <p className={theme.hourlyMm}>{hour.precipitation.toFixed(1)}mm</p>
         </div>
       ))}
     </div>
   );
 }
 
+function DayCard({ day, theme }: { day: WeatherDay; theme: WeatherTheme }) {
+  return (
+    <div className={theme.dayCard}>
+      <p className={theme.dayLabel}>{day.label}</p>
+      <p className="weather-day-row">
+        <span className="weather-day-emoji" aria-hidden>
+          {day.emoji}
+        </span>
+        <span className="weather-day-temps">
+          <span className={theme.dayTempHigh}>{day.high}°</span>
+          <span className={theme.dayTempLow}> / {day.low}°</span>
+        </span>
+      </p>
+      <p className={theme.dayDesc}>{day.description}</p>
+    </div>
+  );
+}
+
+function WeatherShell({
+  children,
+  theme,
+}: {
+  children: React.ReactNode;
+  theme: WeatherTheme;
+}) {
+  return <div className={theme.shell}>{children}</div>;
+}
+
 export default function WeatherForecast() {
+  const theme = getSiteConfig().weather;
   const [state, setState] = useState<WeatherState>({ status: "loading" });
   const [showTomorrowHours, setShowTomorrowHours] = useState(false);
 
@@ -100,91 +127,75 @@ export default function WeatherForecast() {
 
   if (state.status === "loading") {
     return (
-      <div className="rounded-xl section-sky px-3 py-2 text-center text-xs font-semibold text-foreground/45">
-        Checking the skies…
-      </div>
+      <WeatherShell theme={theme}>
+        <p className={theme.loadingText}>Checking the skies…</p>
+      </WeatherShell>
     );
   }
 
   if (state.status === "error") {
     return (
-      <div className="rounded-xl section-sky px-3 py-2 text-center text-xs font-semibold text-foreground/45">
-        Weather is taking a little nap
-      </div>
+      <WeatherShell theme={theme}>
+        <p className={theme.loadingText}>Weather is taking a little nap</p>
+      </WeatherShell>
     );
   }
 
-  const [today, tomorrow] = state.days;
-
   return (
-    <div className="rounded-xl border border-accent-soft/25 section-sky p-2.5 shadow-sm backdrop-blur-sm sm:p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-xs font-bold text-foreground/65">🌤️ Weather</p>
-        <p className="min-w-0 truncate text-[10px] font-semibold text-foreground/40">
-          {state.location.name}
-        </p>
+    <WeatherShell theme={theme}>
+      <div className="mb-1 flex items-center justify-between gap-1">
+        <p className={theme.headerTitle}>🌤️ Weather</p>
+        <p className={theme.headerLocation}>{state.location.name}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-2 gap-0.5">
         {state.days.map((day) => (
-          <div
-            key={day.date}
-            className="paper-slip rounded-xl border border-accent-soft/30 px-2 py-2 text-center"
-          >
-            <p className="text-[10px] font-bold uppercase tracking-wide text-accent">
-              {day.label}
-            </p>
-            <p className="text-xl leading-none">{day.emoji}</p>
-            <p className="mt-0.5 text-xs font-bold text-foreground">
-              {day.high}° / {day.low}°
-            </p>
-            <p className="truncate text-[10px] font-semibold text-foreground/50">
-              {day.description}
-            </p>
-          </div>
+          <DayCard key={day.date} day={day} theme={theme} />
         ))}
       </div>
 
-      {today && (
-        <div className="paper-slip mt-1.5 rounded-xl border border-accent-soft/30 px-2.5 py-2">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-accent">
-              Today rain by hour
-            </p>
-            <RainPill text={today.rainSummary} />
+      <div className="mt-1 space-y-1">
+        {state.days.map((day, index) => (
+          <div key={`${day.date}-hourly`} className="px-0 py-0.5">
+            {index === 0 ? (
+              <>
+                <div className="flex items-center justify-between gap-1">
+                  <p className={theme.sectionTitle}>Today rain by hour</p>
+                  <RainPill text={day.rainSummary} theme={theme} />
+                </div>
+                <HourlyRain hours={day.hours} theme={theme} />
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowTomorrowHours((show) => !show)}
+                  className="flex w-full items-center justify-between gap-1 text-left"
+                  aria-expanded={showTomorrowHours}
+                >
+                  <span className={theme.sectionTitle}>Tomorrow rain by hour</span>
+                  <span className="flex items-center gap-0.5">
+                    {!showTomorrowHours && (
+                      <RainPill text={day.rainSummary} theme={theme} />
+                    )}
+                    {showTomorrowHours && (
+                      <span className={theme.hideLink}>Hide</span>
+                    )}
+                  </span>
+                </button>
+                {showTomorrowHours && (
+                  <>
+                    <div className="mt-0.5 flex justify-end">
+                      <RainPill text={day.rainSummary} theme={theme} />
+                    </div>
+                    <HourlyRain hours={day.hours} theme={theme} isTomorrow />
+                  </>
+                )}
+              </>
+            )}
           </div>
-          <HourlyRain hours={today.hours} />
-        </div>
-      )}
-
-      {tomorrow && (
-        <div className="paper-slip mt-1.5 rounded-xl border border-accent-soft/30 px-2.5 py-2">
-          <button
-            type="button"
-            onClick={() => setShowTomorrowHours((show) => !show)}
-            className="flex w-full items-center justify-between gap-2 text-left transition active:opacity-80"
-            aria-expanded={showTomorrowHours}
-          >
-            <p className="text-[10px] font-bold uppercase tracking-wide text-accent">
-              Tomorrow rain by hour
-            </p>
-            <span className="flex items-center gap-1">
-              {!showTomorrowHours && <RainPill text={tomorrow.rainSummary} />}
-              <span className="text-xs text-foreground/45" aria-hidden>
-                {showTomorrowHours ? "▲" : "▼"}
-              </span>
-            </span>
-          </button>
-          {showTomorrowHours && (
-            <>
-              <div className="mt-1 flex justify-end">
-                <RainPill text={tomorrow.rainSummary} />
-              </div>
-              <HourlyRain hours={tomorrow.hours} />
-            </>
-          )}
-        </div>
-      )}
-    </div>
+        ))}
+      </div>
+    </WeatherShell>
   );
 }

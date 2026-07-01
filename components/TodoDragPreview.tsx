@@ -19,7 +19,7 @@ export default function TodoDragPreview({ todo }: { todo: Todo }) {
         </svg>
       </span>
       <span
-        className="mt-0.5 flex h-6 w-6 shrink-0 rounded-full border border-accent-soft bg-input"
+        className="mt-0.5 flex h-6 w-6 shrink-0 rounded-full border border-accent-soft bg-surface"
         aria-hidden
       />
       <div className="min-w-0 flex-1 py-0.5">
@@ -39,7 +39,7 @@ export default function TodoDragPreview({ todo }: { todo: Todo }) {
                     ? "bg-amber-100 text-amber-700"
                     : due.tone === "soon"
                       ? "bg-lavender text-foreground/70"
-                      : "bg-white/70 text-foreground/55"
+                      : "bg-surface/70 text-foreground/55"
                 : "bg-lavender/40 text-foreground/50"
             }`}
           >

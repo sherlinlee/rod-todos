@@ -1,11 +1,13 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
-import RodAvatar from "@/components/RodAvatar";
+import SiteAvatar from "@/components/SiteAvatar";
+import { markPinVerified } from "@/lib/session-client";
+import { formatSiteDecor, getSiteConfig } from "@/lib/site";
 
 export default function PinLogin() {
-  const router = useRouter();
+  const site = getSiteConfig();
   const searchParams = useSearchParams();
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState(false);
@@ -78,9 +80,9 @@ export default function PinLogin() {
         return;
       }
 
+      markPinVerified();
       const from = searchParams.get("from") || "/";
-      router.replace(from);
-      router.refresh();
+      window.location.assign(from);
     } catch {
       setDigits(["", "", "", "", "", ""]);
       setError(true);
@@ -91,13 +93,13 @@ export default function PinLogin() {
   }
 
   return (
-    <div className="safe-px safe-pt safe-pb mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-4">
-      <div className="w-full rounded-2xl border border-white/80 bg-card/90 p-6 text-center shadow-[0_12px_40px_var(--shadow)] backdrop-blur-sm sm:p-8">
+    <div className="safe-px safe-pt safe-pb mx-auto flex min-h-full w-full max-w-md flex-col items-center justify-center px-4">
+      <div className="w-full rounded-2xl border border-panel bg-card/90 p-6 text-center shadow-[0_12px_40px_var(--shadow)] backdrop-blur-sm sm:p-8">
         <div className="mb-5 flex flex-col items-center gap-2.5">
-          <RodAvatar size={44} />
+          <SiteAvatar size={44} />
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wide text-accent">
-              ⚡ rod&apos;s hangout ⚡
+              {formatSiteDecor(site.loginHeading, site.loginDecor)}
             </p>
             <h1 className="mt-1 text-xl font-bold text-foreground">
               enter your pin
@@ -129,7 +131,7 @@ export default function PinLogin() {
               value={digit}
               disabled={submitting}
               aria-label={`PIN digit ${index + 1}`}
-              className={`h-12 w-10 rounded-xl border-2 bg-input text-center text-lg font-bold outline-none transition sm:h-14 sm:w-12 ${
+              className={`h-12 w-10 rounded-xl border-2 bg-surface text-center text-lg font-bold outline-none transition sm:h-14 sm:w-12 ${
                 error
                   ? "border-red-300 shake-pin"
                   : digit

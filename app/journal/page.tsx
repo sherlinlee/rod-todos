@@ -1,5 +1,5 @@
-import JournalApp from "@/components/JournalApp";
+import { redirect } from "next/navigation";
 
-export default function JournalPage() {
-  return <JournalApp />;
+export default function JournalRedirectPage() {
+  redirect("/notes");
 }

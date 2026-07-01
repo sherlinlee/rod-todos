@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CATEGORIES, getCategoryMeta } from "@/lib/categories";
+import { getCategories, getCategoryMeta } from "@/lib/categories";
 import { formatDueDate } from "@/lib/dates";
 import type { Category, Todo } from "@/lib/types";
 
@@ -21,6 +21,9 @@ type TodoItemProps = {
   onDelete: (id: string) => void;
   onUpdate: (id: string, updates: TodoUpdates) => void;
 };
+
+const actionBtnClass =
+  "flex h-9 w-9 items-center justify-center rounded-lg text-sm text-foreground/40 active:bg-accent-soft/25 active:text-accent sm:h-7 sm:w-7 sm:text-xs sm:opacity-0 sm:group-hover:opacity-100";
 
 export default function TodoItem({
   todo,
@@ -63,6 +66,8 @@ export default function TodoItem({
 
   const category = getCategoryMeta(todo.category);
   const due = todo.dueDate ? formatDueDate(todo.dueDate) : null;
+  const showChecked = todo.completed || isChecking;
+  const showFly = isCompleting && todo.completed;
 
   function startEdit() {
     setDraftText(todo.text);
@@ -82,9 +87,6 @@ export default function TodoItem({
     });
     setEditing(false);
   }
-
-  const showChecked = todo.completed || isChecking;
-  const showFly = isCompleting && todo.completed;
 
   return (
     <li
@@ -137,8 +139,8 @@ export default function TodoItem({
           <span
             className={`flex h-6 w-6 items-center justify-center rounded-full border ${
               showChecked
-                ? "border-accent bg-accent text-white"
-                : "border-accent-soft bg-input"
+                ? "border-accent bg-accent text-on-accent"
+                : "border-accent-soft bg-surface"
             } ${
               isChecking && !todo.completed
                 ? "animate-check-fill"
@@ -165,7 +167,7 @@ export default function TodoItem({
               type="text"
               value={draftText}
               onChange={(e) => setDraftText(e.target.value)}
-              className="w-full rounded-lg border border-accent-soft/60 bg-input px-2.5 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
+              className="w-full rounded-lg border border-accent-soft/60 bg-surface px-2.5 py-2 text-sm text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/15"
               aria-label="Edit task"
             />
 
@@ -175,7 +177,7 @@ export default function TodoItem({
                 type="date"
                 value={draftDueDate}
                 onChange={(e) => setDraftDueDate(e.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-accent-soft/50 bg-input px-2 py-1.5 text-sm outline-none focus:border-accent"
+                className="min-w-0 flex-1 rounded-lg border border-accent-soft/50 bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
               />
               {draftDueDate && (
                 <button
@@ -189,7 +191,7 @@ export default function TodoItem({
             </label>
 
             <div className="flex flex-wrap gap-1">
-              {CATEGORIES.map((cat) => (
+              {getCategories().map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
@@ -197,7 +199,7 @@ export default function TodoItem({
                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                     draftCategory === cat.id
                       ? cat.pill
-                      : "bg-input/80 text-foreground/45"
+                      : "bg-surface/80 text-foreground/45"
                   }`}
                 >
                   {cat.emoji} {cat.boxLabel}
@@ -209,7 +211,7 @@ export default function TodoItem({
               <button
                 type="button"
                 onClick={saveEdit}
-                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-white"
+                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-on-accent"
               >
                 Save
               </button>
@@ -250,7 +252,7 @@ export default function TodoItem({
                         ? "bg-amber-100 text-amber-700"
                         : due.tone === "soon"
                           ? "bg-lavender text-foreground/70"
-                          : "bg-input/70 text-foreground/55"
+                          : "bg-surface/70 text-foreground/55"
                     : "bg-lavender/40 text-foreground/50"
                 }`}
               >
@@ -266,7 +268,7 @@ export default function TodoItem({
               type="button"
               onClick={startEdit}
               aria-label={`Edit "${todo.text}"`}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-sm text-foreground/40 active:bg-accent-soft/25 active:text-accent sm:h-7 sm:w-7 sm:text-xs sm:opacity-0 sm:group-hover:opacity-100"
+              className={actionBtnClass}
             >
               ✎
             </button>
@@ -274,7 +276,7 @@ export default function TodoItem({
               type="button"
               onClick={() => onDelete(todo.id)}
               aria-label={`Delete "${todo.text}"`}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-sm text-foreground/40 active:bg-accent-soft/25 active:text-accent sm:h-7 sm:w-7 sm:text-xs sm:opacity-0 sm:group-hover:opacity-100"
+              className={actionBtnClass}
             >
               ✕
             </button>

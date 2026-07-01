@@ -1,55 +1,52 @@
 import webpush from "web-push";
-import type { PushSubscriptionRecord } from "@/lib/push-types";
-import { removePushSubscription } from "@/lib/server/push-store";
+import type { PushMessage, StoredPushSubscription } from "@/lib/push-types";
+import { ensureWebPushConfigured } from "@/lib/server/push-config";
+import {
+  listPushSubscriptions,
+  removePushSubscription,
+} from "@/lib/server/push-store";
 
-export type PushPayload = {
-  title: string;
-  body: string;
-  url?: string;
-};
-
-function configureWebPush() {
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT ?? "mailto:rod@localhost";
-
-  if (!publicKey || !privateKey) {
-    return false;
-  }
-
-  webpush.setVapidDetails(subject, publicKey, privateKey);
-  return true;
+function toWebPushSubscription(subscription: StoredPushSubscription) {
+  return {
+    endpoint: subscription.endpoint,
+    keys: subscription.keys,
+  };
 }
 
-export function isPushConfigured() {
-  return Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
-}
-
-export function getVapidPublicKey() {
-  return process.env.VAPID_PUBLIC_KEY ?? null;
-}
-
-export async function sendPush(
-  subscription: PushSubscriptionRecord,
-  payload: PushPayload,
-): Promise<"sent" | "expired" | "failed"> {
-  if (!configureWebPush()) return "failed";
+export async function sendPushToSubscription(
+  subscription: StoredPushSubscription,
+  message: PushMessage,
+): Promise<boolean> {
+  if (!ensureWebPushConfigured()) return false;
 
   try {
     await webpush.sendNotification(
-      {
-        endpoint: subscription.endpoint,
-        keys: subscription.keys,
-      },
-      JSON.stringify(payload),
+      toWebPushSubscription(subscription),
+      JSON.stringify(message),
     );
-    return "sent";
+    return true;
   } catch (error) {
-    const status = (error as { statusCode?: number }).statusCode;
-    if (status === 404 || status === 410) {
+    const statusCode =
+      error && typeof error === "object" && "statusCode" in error
+        ? Number((error as { statusCode?: number }).statusCode)
+        : 0;
+
+    if (statusCode === 404 || statusCode === 410) {
       await removePushSubscription(subscription.endpoint);
-      return "expired";
     }
-    return "failed";
+
+    return false;
   }
+}
+
+export async function sendPushToAll(message: PushMessage) {
+  const subscriptions = await listPushSubscriptions();
+  let sent = 0;
+
+  for (const subscription of subscriptions) {
+    const ok = await sendPushToSubscription(subscription, message);
+    if (ok) sent += 1;
+  }
+
+  return { sent, total: subscriptions.length };
 }

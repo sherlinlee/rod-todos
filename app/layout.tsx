@@ -1,22 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Bangers, Nunito } from "next/font/google";
+import { Fredoka } from "next/font/google";
+import SessionGuard from "@/components/SessionGuard";
+import ThemeInit from "@/components/ThemeInit";
+import ThemeToggle from "@/components/ThemeToggle";
+import { getSiteConfig } from "@/lib/site";
 import "./globals.css";
 
-const nunito = Nunito({
-  variable: "--font-nunito",
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const bangers = Bangers({
-  variable: "--font-bangers",
-  subsets: ["latin"],
-  weight: ["400"],
-});
+const site = getSiteConfig();
 
 export const metadata: Metadata = {
-  title: "rod's to-do(s) ⚡",
-  description: "A bold little to-do app, just for Rod",
+  title: site.title,
+  description: site.description,
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [{ url: "/icon-512.png", type: "image/png", sizes: "512x512" }],
@@ -25,18 +25,15 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "rod's to-do(s)",
+    title: site.appName,
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
-  interactiveWidget: "resizes-content",
-  themeColor: "#eaf4fc",
+  themeColor: site.themeColor,
 };
 
 export default function RootLayout({
@@ -47,10 +44,24 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${nunito.variable} ${bangers.variable} h-full antialiased`}
+      data-site={site.owner}
+      className={`${fredoka.variable} h-full overflow-hidden antialiased`}
+      suppressHydrationWarning
     >
-      <body className="overflow-x-hidden flex flex-col">
-        {children}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var k="${site.owner}-theme-mode",t=localStorage.getItem(k);if(t==="dark"||t==="light"){document.documentElement.dataset.theme=t;return}if(window.matchMedia("(prefers-color-scheme: dark)").matches){document.documentElement.dataset.theme="dark"}}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className="fixed inset-0 flex flex-col overflow-hidden overscroll-none">
+        <ThemeInit />
+        <ThemeToggle />
+        <SessionGuard />
+        <div className="app-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+          {children}
+        </div>
       </body>
     </html>
   );
