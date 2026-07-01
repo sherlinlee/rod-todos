@@ -1,20 +1,18 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import SiteAvatar from "@/components/SiteAvatar";
-import { markPinVerified } from "@/lib/session-client";
 import { formatSiteDecor, getSiteConfig } from "@/lib/site";
 
 export default function PinLogin() {
   const site = getSiteConfig();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
-
-  const pin = digits.join("");
 
   function focusIndex(index: number) {
     inputsRef.current[index]?.focus();
@@ -70,6 +68,7 @@ export default function PinLogin() {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ pin: value }),
       });
 
@@ -80,9 +79,9 @@ export default function PinLogin() {
         return;
       }
 
-      markPinVerified();
       const from = searchParams.get("from") || "/";
-      window.location.assign(from);
+      router.replace(from);
+      router.refresh();
     } catch {
       setDigits(["", "", "", "", "", ""]);
       setError(true);

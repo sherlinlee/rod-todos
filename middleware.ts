@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { AUTH_COOKIE_NAME, isAuthenticated } from "@/lib/auth";
+import {
+  AUTH_COOKIE_NAME,
+  isAuthenticated,
+  LEGACY_AUTH_COOKIE_NAME,
+} from "@/lib/auth";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -20,7 +24,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const cookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  const cookie =
+    request.cookies.get(AUTH_COOKIE_NAME)?.value ??
+    request.cookies.get(LEGACY_AUTH_COOKIE_NAME)?.value;
   if (isAuthenticated(cookie)) {
     return NextResponse.next();
   }

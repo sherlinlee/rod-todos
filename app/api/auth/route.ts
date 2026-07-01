@@ -1,6 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, getAuthToken, isValidPin } from "@/lib/auth";
+import {
+  AUTH_ACTIVITY_COOKIE_NAME,
+  AUTH_COOKIE_NAME,
+  authCookieOptions,
+  getAuthToken,
+  isValidPin,
+} from "@/lib/auth";
+
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 
 export async function POST(request: Request) {
   let pin = "";
@@ -22,13 +30,25 @@ export async function POST(request: Request) {
   }
 
   const cookieStore = await cookies();
+  const now = String(Date.now());
   cookieStore.set(AUTH_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
+    ...authCookieOptions,
+    maxAge: SESSION_MAX_AGE,
+  });
+  cookieStore.set(AUTH_ACTIVITY_COOKIE_NAME, now, {
+    ...authCookieOptions,
+    maxAge: SESSION_MAX_AGE,
   });
 
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE() {
+  const cookieStore = await cookies();
+  cookieStore.set(AUTH_COOKIE_NAME, "", { ...authCookieOptions, maxAge: 0 });
+  cookieStore.set(AUTH_ACTIVITY_COOKIE_NAME, "", {
+    ...authCookieOptions,
+    maxAge: 0,
+  });
   return NextResponse.json({ ok: true });
 }

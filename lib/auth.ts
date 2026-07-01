@@ -1,5 +1,7 @@
-export const AUTH_COOKIE_NAME = "belle-session";
-export const AUTH_ACTIVITY_COOKIE_NAME = "belle-session-at";
+export const AUTH_COOKIE_NAME = "rod-session";
+export const AUTH_ACTIVITY_COOKIE_NAME = "rod-session-at";
+/** @deprecated old Belle port name — middleware still accepts for one release */
+export const LEGACY_AUTH_COOKIE_NAME = "belle-session";
 export const SESSION_INACTIVITY_MS = 10 * 60 * 1000;
 
 export function getAuthToken() {
