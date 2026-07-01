@@ -124,7 +124,9 @@ export function mergeSyncData(
   local: RodSyncData,
   cloud: RodSyncData,
 ): RodSyncData {
-  const localRevision = local.updatedAt;
+  // Empty local (e.g. stale PWA storage after a bad sync) must not block cloud items
+  // whose per-item timestamps are older than a bogus high local revision.
+  const localRevision = hasUserContent(local) ? local.updatedAt : 0;
   const tombstones = mergeTombstones(local.tombstones, cloud.tombstones);
   const tombstoneLookup = tombstoneMap(tombstones);
 
