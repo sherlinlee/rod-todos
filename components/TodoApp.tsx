@@ -20,7 +20,6 @@ import { hapticComplete } from "@/lib/haptics";
 import {
   allEssentialsDoneToday,
   completePermanentTodo,
-  ensureEssentials,
   isPermanentTodo,
   isRegularTodo,
   pendingEssentials,
@@ -81,6 +80,7 @@ export default function TodoApp() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [hydrated, setHydrated] = useState(false);
+  const [syncReady, setSyncReady] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [completionFlash, setCompletionFlash] = useState<{
@@ -118,10 +118,13 @@ export default function TodoApp() {
         const data = await hydrateFromCloud();
         if (!cancelled) {
           setTodos(data.todos);
+          setSyncReady(true);
         }
       } catch {
         if (!cancelled) {
-          setTodos(ensureEssentials([]));
+          const local = readLocalTodos();
+          todosRef.current = local;
+          setTodos(local);
         }
       } finally {
         if (!cancelled) setHydrated(true);
@@ -174,7 +177,7 @@ export default function TodoApp() {
   useCloudRefresh(onCloudRefresh);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !syncReady) return;
     const handle = window.setTimeout(() => {
       writeLocalTodos(todos);
       scheduleCloudPush(() => ({
@@ -186,7 +189,7 @@ export default function TodoApp() {
       }));
     }, 0);
     return () => window.clearTimeout(handle);
-  }, [todos, hydrated]);
+  }, [todos, hydrated, syncReady]);
 
   const sortedTodos = useMemo(() => sortByDueDate(todos), [todos]);
 
