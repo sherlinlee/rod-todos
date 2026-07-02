@@ -6,10 +6,15 @@ import {
   listPushSubscriptions,
   removePushSubscription,
 } from "@/lib/server/push-store";
+import { loadSyncData } from "@/lib/server/store";
 import {
   buildDailyReminderMessage,
+  buildTaskReminderMessage,
+  findTaskRemindersDueNow,
   getSubscriptionReminderPreferences,
+  markTodosReminded,
 } from "@/lib/server/reminders";
+import { todayStringInTimezone } from "@/lib/dates";
 
 function toWebPushSubscription(subscription: StoredPushSubscription) {
   return {
@@ -56,31 +61,75 @@ export async function sendPushToAll(message: PushMessage) {
   return { sent, total: subscriptions.length };
 }
 
+async function sendTaskRemindersForSubscription(
+  subscription: StoredPushSubscription,
+  now: Date,
+  force: boolean,
+) {
+  const prefs = getSubscriptionReminderPreferences(subscription);
+  const sync = await loadSyncData();
+  if (!sync) return { sent: 0, eligible: 0 };
+
+  const matching = findTaskRemindersDueNow(sync, prefs.timezone, now, force);
+  if (matching.length === 0) return { sent: 0, eligible: 0 };
+
+  const today = todayStringInTimezone(prefs.timezone);
+  const sentTodoIds: string[] = [];
+
+  for (const todo of matching) {
+    const ok = await sendPushToSubscription(
+      subscription,
+      buildTaskReminderMessage(todo),
+    );
+    if (ok) sentTodoIds.push(todo.id);
+  }
+
+  if (sentTodoIds.length > 0) {
+    await markTodosReminded(sentTodoIds, today);
+  }
+
+  return { sent: sentTodoIds.length, eligible: matching.length };
+}
+
 export async function sendDueReminders(now = new Date(), force = false) {
   const subscriptions = await listPushSubscriptions();
-  let sent = 0;
-  let eligible = 0;
+  let dailySent = 0;
+  let taskSent = 0;
+  let dailyEligible = 0;
+  let taskEligible = 0;
   let skippedNoTodos = 0;
 
   for (const subscription of subscriptions) {
     const prefs = getSubscriptionReminderPreferences(subscription);
-    if (!force && !matchesReminderSchedule(prefs, now)) continue;
 
-    eligible += 1;
-    const message = await buildDailyReminderMessage(prefs.timezone);
-    if (!message) {
-      skippedNoTodos += 1;
-      continue;
+    if (force || matchesReminderSchedule(prefs, now)) {
+      dailyEligible += 1;
+      const message = await buildDailyReminderMessage(prefs.timezone);
+      if (!message) {
+        skippedNoTodos += 1;
+      } else {
+        const ok = await sendPushToSubscription(subscription, message);
+        if (ok) dailySent += 1;
+      }
     }
 
-    const ok = await sendPushToSubscription(subscription, message);
-    if (ok) sent += 1;
+    const taskResult = await sendTaskRemindersForSubscription(
+      subscription,
+      now,
+      force,
+    );
+    taskEligible += taskResult.eligible;
+    taskSent += taskResult.sent;
   }
 
   return {
-    sent,
+    sent: dailySent + taskSent,
+    dailySent,
+    taskSent,
     total: subscriptions.length,
-    eligible,
+    eligible: dailyEligible + taskEligible,
+    dailyEligible,
+    taskEligible,
     skippedNoTodos,
   };
 }

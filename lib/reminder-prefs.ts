@@ -119,3 +119,40 @@ export function formatReminderTime(prefs: ReminderPreferences) {
   const hour12 = prefs.hour % 12 || 12;
   return `${hour12}:${minute} ${period}`;
 }
+
+export function formatTaskReminderTime(hour: number, minute: number) {
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+export function parseTaskReminderTime(
+  value: string | null | undefined,
+): { hour: number; minute: number } | null {
+  if (!value || typeof value !== "string") return null;
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!isValidReminderHour(hour) || !isValidReminderMinute(minute)) return null;
+  return { hour, minute };
+}
+
+export function formatTaskReminderTimeLabel(value: string | null | undefined) {
+  const parsed = parseTaskReminderTime(value);
+  if (!parsed) return null;
+  return formatReminderTime({
+    hour: parsed.hour,
+    minute: parsed.minute,
+    timezone: "UTC",
+  });
+}
+
+export function matchesTaskReminderTime(
+  reminderTime: string,
+  timeZone: string,
+  now = new Date(),
+) {
+  const parsed = parseTaskReminderTime(reminderTime);
+  if (!parsed) return false;
+  const { hour, minute } = timePartsInTimezone(timeZone, now);
+  return hour === parsed.hour && minute === parsed.minute;
+}

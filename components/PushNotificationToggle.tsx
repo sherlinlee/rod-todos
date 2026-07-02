@@ -266,7 +266,7 @@ export default function PushNotificationToggle() {
             {status === "loading"
               ? "Checking notification support…"
               : status === "enabled"
-                ? "Daily nudge when you have due or overdue to-dos"
+                ? "Morning digest plus per-task pings when you set a time"
                 : status === "denied"
                   ? "Allow notifications in your browser settings, then try again"
                   : status === "unsupported"

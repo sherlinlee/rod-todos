@@ -3,14 +3,17 @@
 import { useEffect, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import ReminderTimePicker from "@/components/ReminderTimePicker";
 import { getCategories, getCategoryMeta } from "@/lib/categories";
 import { formatDueDate } from "@/lib/dates";
+import { formatTaskReminderTimeLabel } from "@/lib/reminder-prefs";
 import type { Category, Todo } from "@/lib/types";
 
 export type TodoUpdates = {
   text: string;
   dueDate: string | null;
   category: Category;
+  reminderTime: string | null;
 };
 
 type TodoItemProps = {
@@ -37,6 +40,9 @@ export default function TodoItem({
   const [draftText, setDraftText] = useState(todo.text);
   const [draftDueDate, setDraftDueDate] = useState(todo.dueDate ?? "");
   const [draftCategory, setDraftCategory] = useState(todo.category);
+  const [draftReminderTime, setDraftReminderTime] = useState(
+    todo.reminderTime ?? null,
+  );
 
   const {
     attributes,
@@ -55,6 +61,7 @@ export default function TodoItem({
       setDraftText(todo.text);
       setDraftDueDate(todo.dueDate ?? "");
       setDraftCategory(todo.category);
+      setDraftReminderTime(todo.reminderTime ?? null);
     }
   }, [todo, editing]);
 
@@ -66,6 +73,7 @@ export default function TodoItem({
 
   const category = getCategoryMeta(todo.category);
   const due = todo.dueDate ? formatDueDate(todo.dueDate) : null;
+  const reminderLabel = formatTaskReminderTimeLabel(todo.reminderTime);
   const showChecked = todo.completed || isChecking;
   const showFly = isCompleting && todo.completed;
 
@@ -73,6 +81,7 @@ export default function TodoItem({
     setDraftText(todo.text);
     setDraftDueDate(todo.dueDate ?? "");
     setDraftCategory(todo.category);
+    setDraftReminderTime(todo.reminderTime ?? null);
     setEditing(true);
   }
 
@@ -84,6 +93,7 @@ export default function TodoItem({
       text,
       dueDate: draftDueDate || null,
       category: draftCategory,
+      reminderTime: draftDueDate ? draftReminderTime : null,
     });
     setEditing(false);
   }
@@ -176,7 +186,11 @@ export default function TodoItem({
               <input
                 type="date"
                 value={draftDueDate}
-                onChange={(e) => setDraftDueDate(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setDraftDueDate(next);
+                  if (!next) setDraftReminderTime(null);
+                }}
                 className="min-w-0 flex-1 rounded-lg border border-accent-soft/50 bg-surface px-2 py-1.5 text-sm outline-none focus:border-accent"
               />
               {draftDueDate && (
@@ -206,6 +220,15 @@ export default function TodoItem({
                 </button>
               ))}
             </div>
+
+            {draftDueDate && (
+              <ReminderTimePicker
+                value={draftReminderTime}
+                onChange={setDraftReminderTime}
+                idPrefix={`edit-todo-${todo.id}`}
+                compact
+              />
+            )}
 
             <div className="flex gap-1.5">
               <button
@@ -258,6 +281,12 @@ export default function TodoItem({
               >
                 📅 {due ? due.label : "No date"}
               </span>
+
+              {reminderLabel && (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-soft/35 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
+                  🔔 {reminderLabel}
+                </span>
+              )}
             </div>
           </div>
         )}

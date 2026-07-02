@@ -1,3 +1,4 @@
+import { parseTaskReminderTime } from "./reminder-prefs";
 import type { Todo } from "./types";
 
 function createId() {
@@ -23,6 +24,13 @@ export function migrateTodos(data: unknown): Todo[] {
       updatedAt:
         typeof raw.updatedAt === "number" ? raw.updatedAt : undefined,
       dueDate: typeof raw.dueDate === "string" ? raw.dueDate : null,
+      reminderTime:
+        typeof raw.reminderTime === "string" &&
+        parseTaskReminderTime(raw.reminderTime)
+          ? raw.reminderTime
+          : null,
+      lastRemindedDate:
+        typeof raw.lastRemindedDate === "string" ? raw.lastRemindedDate : null,
       category,
       order: typeof raw.order === "number" ? raw.order : index,
       permanent: raw.permanent === true ? true : undefined,

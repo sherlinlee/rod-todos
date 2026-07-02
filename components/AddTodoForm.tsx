@@ -1,6 +1,7 @@
 "use client";
 
 import { getCategories } from "@/lib/categories";
+import ReminderTimePicker from "@/components/ReminderTimePicker";
 import { todayString } from "@/lib/dates";
 import type { Category } from "@/lib/types";
 
@@ -8,9 +9,11 @@ type AddTodoFormProps = {
   input: string;
   category: Category;
   dueDate: string;
+  reminderTime: string | null;
   onInputChange: (value: string) => void;
   onCategoryChange: (value: Category) => void;
   onDueDateChange: (value: string) => void;
+  onReminderTimeChange: (value: string | null) => void;
   onSubmit: (e: React.FormEvent) => void;
 };
 
@@ -18,9 +21,11 @@ export default function AddTodoForm({
   input,
   category,
   dueDate,
+  reminderTime,
   onInputChange,
   onCategoryChange,
   onDueDateChange,
+  onReminderTimeChange,
   onSubmit,
 }: AddTodoFormProps) {
   return (
@@ -71,10 +76,25 @@ export default function AddTodoForm({
           type="date"
           value={dueDate}
           min={todayString()}
-          onChange={(e) => onDueDateChange(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value;
+            onDueDateChange(next);
+            if (!next) onReminderTimeChange(null);
+          }}
           className="min-w-0 flex-1 rounded-lg border border-accent-soft/50 bg-surface/80 px-2 py-1.5 text-sm text-foreground outline-none focus:border-accent"
         />
       </label>
+
+      {dueDate && (
+        <div className="rounded-xl bg-background/60 px-3 py-2">
+          <ReminderTimePicker
+            value={reminderTime}
+            onChange={onReminderTimeChange}
+            idPrefix="add-todo-reminder"
+            compact
+          />
+        </div>
+      )}
     </form>
   );
 }

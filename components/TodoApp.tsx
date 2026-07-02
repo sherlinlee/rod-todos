@@ -69,6 +69,7 @@ export default function TodoApp() {
   const [input, setInput] = useState("");
   const [category, setCategory] = useState<Category>("personal");
   const [dueDate, setDueDate] = useState("");
+  const [reminderTime, setReminderTime] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [hydrated, setHydrated] = useState(false);
@@ -243,12 +244,15 @@ export default function TodoApp() {
         completed: false,
         createdAt: Date.now(),
         dueDate: dueDate || null,
+        reminderTime: dueDate && reminderTime ? reminderTime : null,
+        lastRemindedDate: null,
         category,
         order: maxOrder + 1,
       },
     ]);
     setInput("");
     setDueDate("");
+    setReminderTime(null);
   }
 
   function toggleTodo(id: string) {
@@ -323,8 +327,22 @@ export default function TodoApp() {
     const target = todos.find((t) => t.id === id);
     if (!target || isPermanentTodo(target)) return;
 
+    const reminderChanged = updates.reminderTime !== (target.reminderTime ?? null);
+    const dueDateChanged = updates.dueDate !== target.dueDate;
+
     setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              ...updates,
+              updatedAt: Date.now(),
+              ...(reminderChanged || dueDateChanged
+                ? { lastRemindedDate: null }
+                : {}),
+            }
+          : t,
+      ),
     );
   }
 
@@ -416,9 +434,11 @@ export default function TodoApp() {
             input={input}
             category={category}
             dueDate={dueDate}
+            reminderTime={reminderTime}
             onInputChange={setInput}
             onCategoryChange={setCategory}
             onDueDateChange={setDueDate}
+            onReminderTimeChange={setReminderTime}
             onSubmit={addTodo}
           />
 
