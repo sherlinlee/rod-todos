@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Fredoka } from "next/font/google";
-import SessionGuard from "@/components/SessionGuard";
 import ThemeInit from "@/components/ThemeInit";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getSiteConfig } from "@/lib/site";
@@ -58,7 +57,6 @@ export default function RootLayout({
       <body className="fixed inset-0 flex flex-col overflow-hidden overscroll-none">
         <ThemeInit />
         <ThemeToggle />
-        <SessionGuard />
         <div className="app-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           {children}
         </div>

@@ -107,7 +107,7 @@ export default function PinLogin() {
         </div>
 
         <p className="mb-5 text-sm text-foreground/55">
-          6 digits to peek inside
+          6 digits — then this device stays unlocked for 30 days
         </p>
 
         <div

@@ -9,7 +9,7 @@ Personal to-do, ideas, and journal app for Rod — same features as Belle's app,
 - Journal with daily Bible verse, missed-day backfill, archive by month/year
 - Cloud sync across devices (Vercel Blob)
 - Due-date push reminders (Web Push + daily cron)
-- PIN gate (6 digits)
+- PIN gate — unlock once per device, remembered for 30 days
 
 ## Local dev
 
@@ -24,8 +24,9 @@ npm run dev
 
 Connected to GitHub + Vercel. Set production env vars:
 
-- `APP_PIN` — 6-digit login PIN
+- `APP_PIN` — 6-digit login PIN (once per device per month)
 - `AUTH_TOKEN` — session secret (must match cookie validation)
+- `TRUSTED_DEVICE_TOKEN` — optional separate secret for the 30-day device cookie (defaults to `AUTH_TOKEN`)
 - `BLOB_STORE_ID` — Vercel Blob store for sync
 - `BLOB_WEBHOOK_PUBLIC_KEY` — from Blob store settings
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — Web Push keys (`npx web-push generate-vapid-keys`)

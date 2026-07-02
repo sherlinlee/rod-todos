@@ -1,11 +1,15 @@
 export const AUTH_COOKIE_NAME = "rod-session";
-export const AUTH_ACTIVITY_COOKIE_NAME = "rod-session-at";
 /** @deprecated old Belle port name — middleware still accepts for one release */
 export const LEGACY_AUTH_COOKIE_NAME = "belle-session";
-export const SESSION_INACTIVITY_MS = 10 * 60 * 1000;
+export const TRUSTED_DEVICE_COOKIE_NAME = "rod-trusted";
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 
 export function getAuthToken() {
   return process.env.AUTH_TOKEN;
+}
+
+export function getTrustedDeviceToken() {
+  return process.env.TRUSTED_DEVICE_TOKEN ?? getAuthToken();
 }
 
 export function getAppPin() {
@@ -27,17 +31,16 @@ export function isAuthenticated(cookieValue: string | undefined) {
   return Boolean(token && cookieValue === token);
 }
 
-export function isSessionActive(lastActivityRaw: string | undefined) {
-  const lastActivity = Number(lastActivityRaw);
-  if (!Number.isFinite(lastActivity) || lastActivity <= 0) return false;
-  return Date.now() - lastActivity <= SESSION_INACTIVITY_MS;
+export function isTrustedDevice(cookieValue: string | undefined) {
+  const token = getTrustedDeviceToken();
+  return Boolean(token && cookieValue === token);
 }
 
-export function isSessionValid(
+export function isRequestAuthed(
   sessionToken: string | undefined,
-  lastActivityRaw: string | undefined,
+  trustedToken: string | undefined,
 ) {
-  return isAuthenticated(sessionToken) && isSessionActive(lastActivityRaw);
+  return isAuthenticated(sessionToken) || isTrustedDevice(trustedToken);
 }
 
 export const authCookieOptions = {
@@ -46,3 +49,7 @@ export const authCookieOptions = {
   sameSite: "lax" as const,
   path: "/",
 };
+
+export function sessionCookieOptions(maxAge = SESSION_MAX_AGE) {
+  return { ...authCookieOptions, maxAge };
+}

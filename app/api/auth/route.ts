@@ -1,14 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
-  AUTH_ACTIVITY_COOKIE_NAME,
   AUTH_COOKIE_NAME,
   authCookieOptions,
   getAuthToken,
+  getTrustedDeviceToken,
   isValidPin,
+  sessionCookieOptions,
+  TRUSTED_DEVICE_COOKIE_NAME,
 } from "@/lib/auth";
-
-const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 
 export async function POST(request: Request) {
   let pin = "";
@@ -25,30 +25,23 @@ export async function POST(request: Request) {
   }
 
   const token = getAuthToken();
-  if (!token) {
+  const trustedToken = getTrustedDeviceToken();
+  if (!token || !trustedToken) {
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 
   const cookieStore = await cookies();
-  const now = String(Date.now());
-  cookieStore.set(AUTH_COOKIE_NAME, token, {
-    ...authCookieOptions,
-    maxAge: SESSION_MAX_AGE,
-  });
-  cookieStore.set(AUTH_ACTIVITY_COOKIE_NAME, now, {
-    ...authCookieOptions,
-    maxAge: SESSION_MAX_AGE,
-  });
+  const opts = sessionCookieOptions();
+  cookieStore.set(AUTH_COOKIE_NAME, token, opts);
+  cookieStore.set(TRUSTED_DEVICE_COOKIE_NAME, trustedToken, opts);
 
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE() {
   const cookieStore = await cookies();
-  cookieStore.set(AUTH_COOKIE_NAME, "", { ...authCookieOptions, maxAge: 0 });
-  cookieStore.set(AUTH_ACTIVITY_COOKIE_NAME, "", {
-    ...authCookieOptions,
-    maxAge: 0,
-  });
+  const cleared = { ...authCookieOptions, maxAge: 0 };
+  cookieStore.set(AUTH_COOKIE_NAME, "", cleared);
+  cookieStore.set(TRUSTED_DEVICE_COOKIE_NAME, "", cleared);
   return NextResponse.json({ ok: true });
 }
