@@ -1,11 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  REMINDER_MINUTES,
+  formatReminderTime,
+  getBrowserDefaultReminderPreferences,
+  type ReminderPreferences,
+} from "@/lib/reminder-prefs";
 import {
   describePushError,
+  fetchReminderPreferences,
+  getBrowserTimezone,
+  getCurrentPushSubscription,
   getPushSecureContextError,
   getPushSupportHint,
   isPushSupported,
+  saveReminderPreferences,
   sendTestPush,
   subscribeToPush,
   syncPushSubscriptionState,
@@ -21,11 +31,50 @@ type PushStatus =
   | "enabled"
   | "working";
 
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => hour);
+
+function formatHourLabel(hour: number) {
+  const period = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 || 12;
+  return `${hour12} ${period}`;
+}
+
+function formatTimezoneLabel(timezone: string) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      timeZoneName: "shortOffset",
+    }).formatToParts(new Date());
+    const offset =
+      parts.find((part) => part.type === "timeZoneName")?.value ?? "";
+    return offset ? `${timezone} (${offset})` : timezone;
+  } catch {
+    return timezone;
+  }
+}
+
+const selectClassName =
+  "rounded-full border border-panel bg-background px-3 py-1.5 text-xs font-semibold text-foreground/80 transition focus:border-accent focus:outline-none";
+
 export default function PushNotificationToggle() {
   const [status, setStatus] = useState<PushStatus>("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [supportHint, setSupportHint] = useState<string | null>(null);
+  const [endpoint, setEndpoint] = useState<string | null>(null);
+  const [reminder, setReminder] = useState<ReminderPreferences>(() =>
+    getBrowserDefaultReminderPreferences(),
+  );
+  const [savingReminder, setSavingReminder] = useState(false);
+
+  const loadReminderForSubscription = useCallback(async (subEndpoint: string) => {
+    const saved = await fetchReminderPreferences(subEndpoint);
+    if (saved) {
+      setReminder(saved);
+      return;
+    }
+    setReminder(getBrowserDefaultReminderPreferences());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,24 +128,56 @@ export default function PushNotificationToggle() {
       }
 
       const next = await syncPushSubscriptionState();
-      if (!cancelled) setStatus(next);
+      if (cancelled) return;
+
+      setStatus(next);
+      if (next === "enabled") {
+        const subscription = await getCurrentPushSubscription();
+        if (subscription && !cancelled) {
+          setEndpoint(subscription.endpoint);
+          await loadReminderForSubscription(subscription.endpoint);
+        }
+      }
     }
 
     void load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadReminderForSubscription]);
+
+  async function persistReminder(next: ReminderPreferences) {
+    if (!endpoint) return;
+    setSavingReminder(true);
+    setError(null);
+    const withTimezone = { ...next, timezone: getBrowserTimezone() };
+    try {
+      const saved = await saveReminderPreferences(endpoint, withTimezone);
+      setReminder(saved);
+      setMessage(`Reminder set for ${formatReminderTime(saved)}`);
+    } catch {
+      setError("Could not save reminder time");
+    } finally {
+      setSavingReminder(false);
+    }
+  }
 
   async function enablePush() {
     setError(null);
     setMessage(null);
     setStatus("working");
 
+    const prefs = {
+      ...reminder,
+      timezone: getBrowserTimezone(),
+    };
+
     try {
-      await subscribeToPush();
+      const subEndpoint = await subscribeToPush(prefs);
+      setEndpoint(subEndpoint);
+      setReminder(prefs);
       setStatus("enabled");
-      setMessage("Reminders turned on");
+      setMessage(`Reminders on — daily at ${formatReminderTime(prefs)}`);
     } catch (err) {
       const code = err instanceof Error ? err.message : "failed";
       if (code === "denied") {
@@ -120,6 +201,7 @@ export default function PushNotificationToggle() {
 
     try {
       await unsubscribeFromPush();
+      setEndpoint(null);
       setStatus("default");
       setMessage("Reminders turned off");
     } catch {
@@ -154,11 +236,24 @@ export default function PushNotificationToggle() {
     }
   }
 
-  const busy = status === "working";
+  function updateReminderHour(hour: number) {
+    const next = { ...reminder, hour };
+    setReminder(next);
+    if (status === "enabled") void persistReminder(next);
+  }
+
+  function updateReminderMinute(minute: number) {
+    const next = { ...reminder, minute };
+    setReminder(next);
+    if (status === "enabled") void persistReminder(next);
+  }
+
+  const busy = status === "working" || savingReminder;
   const showEnableButton =
     status === "default" ||
     status === "denied" ||
     status === "not_configured";
+  const timezoneLabel = formatTimezoneLabel(getBrowserTimezone());
 
   return (
     <section className="mb-3 rounded-2xl border border-panel bg-card/90 p-3 shadow-[0_12px_32px_var(--shadow)] backdrop-blur-sm sm:mb-4 sm:p-4">
@@ -171,7 +266,7 @@ export default function PushNotificationToggle() {
             {status === "loading"
               ? "Checking notification support…"
               : status === "enabled"
-                ? "Daily nudge for due and overdue to-dos"
+                ? "Daily nudge when you have due or overdue to-dos"
                 : status === "denied"
                   ? "Allow notifications in your browser settings, then try again"
                   : status === "unsupported"
@@ -179,7 +274,7 @@ export default function PushNotificationToggle() {
                       "This browser cannot receive push notifications yet"
                     : status === "not_configured"
                       ? "Server push keys are not set up yet"
-                      : "Get a morning ping when something is due"}
+                      : "Pick a time — we only ping when something is due"}
           </p>
           {message && (
             <p className="mt-1 text-xs font-semibold text-forest">{message}</p>
@@ -194,37 +289,77 @@ export default function PushNotificationToggle() {
       </div>
 
       {status !== "unsupported" && status !== "loading" && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {status === "enabled" ? (
-            <>
-              <button
-                type="button"
-                onClick={() => void testPush()}
-                disabled={busy}
-                className="rounded-full bg-accent-soft/50 px-3 py-1.5 text-xs font-bold text-accent transition active:scale-95 disabled:opacity-60"
-              >
-                Send test
-              </button>
-              <button
-                type="button"
-                onClick={() => void disablePush()}
-                disabled={busy}
-                className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold text-foreground/60 transition active:scale-95 disabled:opacity-60"
-              >
-                Turn off
-              </button>
-            </>
-          ) : showEnableButton ? (
-            <button
-              type="button"
-              onClick={() => void enablePush()}
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor="reminder-hour">
+              Reminder hour
+            </label>
+            <select
+              id="reminder-hour"
+              value={reminder.hour}
+              onChange={(e) => updateReminderHour(Number(e.target.value))}
               disabled={busy || status === "denied"}
-              className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-on-accent transition active:scale-95 disabled:opacity-60"
+              className={selectClassName}
             >
-              {busy ? "Working…" : "Turn on reminders"}
-            </button>
-          ) : null}
-        </div>
+              {HOUR_OPTIONS.map((hour) => (
+                <option key={hour} value={hour}>
+                  {formatHourLabel(hour)}
+                </option>
+              ))}
+            </select>
+
+            <label className="sr-only" htmlFor="reminder-minute">
+              Reminder minute
+            </label>
+            <select
+              id="reminder-minute"
+              value={reminder.minute}
+              onChange={(e) => updateReminderMinute(Number(e.target.value))}
+              disabled={busy || status === "denied"}
+              className={selectClassName}
+            >
+              {REMINDER_MINUTES.map((minute) => (
+                <option key={minute} value={minute}>
+                  :{String(minute).padStart(2, "0")}
+                </option>
+              ))}
+            </select>
+
+            <span className="text-xs text-foreground/55">{timezoneLabel}</span>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {status === "enabled" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void testPush()}
+                  disabled={busy}
+                  className="rounded-full bg-accent-soft/50 px-3 py-1.5 text-xs font-bold text-accent transition active:scale-95 disabled:opacity-60"
+                >
+                  Send test
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void disablePush()}
+                  disabled={busy}
+                  className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold text-foreground/60 transition active:scale-95 disabled:opacity-60"
+                >
+                  Turn off
+                </button>
+              </>
+            ) : showEnableButton ? (
+              <button
+                type="button"
+                onClick={() => void enablePush()}
+                disabled={busy || status === "denied"}
+                className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-on-accent transition active:scale-95 disabled:opacity-60"
+              >
+                {busy ? "Working…" : "Turn on reminders"}
+              </button>
+            ) : null}
+          </div>
+        </>
       )}
     </section>
   );

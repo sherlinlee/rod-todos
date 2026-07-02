@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { isPushConfigured } from "@/lib/server/push-config";
-import {
-  buildDailyReminderMessage,
-  shouldSendScheduledReminders,
-} from "@/lib/server/reminders";
-import { sendPushToAll } from "@/lib/server/push-send";
+import { sendDueReminders } from "@/lib/server/push-send";
 
 function isAuthorizedCron(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -26,15 +22,25 @@ export async function GET(request: NextRequest) {
   }
 
   const force = request.nextUrl.searchParams.get("force") === "1";
-  if (!force && !shouldSendScheduledReminders()) {
-    return NextResponse.json({ ok: true, skipped: true, reason: "outside_window" });
+  const result = await sendDueReminders(new Date(), force);
+
+  if (!force && result.eligible === 0) {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "outside_window",
+      ...result,
+    });
   }
 
-  const message = await buildDailyReminderMessage();
-  if (!message) {
-    return NextResponse.json({ ok: true, skipped: true, reason: "nothing_due" });
+  if (result.eligible > 0 && result.sent === 0) {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "nothing_due",
+      ...result,
+    });
   }
 
-  const result = await sendPushToAll(message);
-  return NextResponse.json({ ok: true, ...result, message });
+  return NextResponse.json({ ok: true, ...result });
 }

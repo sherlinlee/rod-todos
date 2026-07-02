@@ -1,5 +1,10 @@
 import { get, put } from "@vercel/blob";
 import { getSiteConfig } from "@/lib/site";
+import {
+  getDefaultReminderPreferences,
+  parseReminderPreferences,
+  type ReminderPreferences,
+} from "@/lib/reminder-prefs";
 import type {
   PushStoreData,
   PushSubscriptionPayload,
@@ -65,12 +70,21 @@ export async function upsertPushSubscription(
   if (!isValidSubscription(subscription)) return false;
 
   const store = await loadPushStore();
+  const existing = store.subscriptions.find(
+    (item) => item.endpoint === subscription.endpoint,
+  );
+  const reminder =
+    parseReminderPreferences(subscription.reminder) ??
+    parseReminderPreferences(existing?.reminder) ??
+    getDefaultReminderPreferences();
+
   const next: StoredPushSubscription = {
     endpoint: subscription.endpoint,
     keys: subscription.keys,
     expirationTime: subscription.expirationTime ?? null,
-    createdAt: Date.now(),
-    userAgent,
+    createdAt: existing?.createdAt ?? Date.now(),
+    userAgent: userAgent ?? existing?.userAgent,
+    reminder,
   };
 
   const without = store.subscriptions.filter(
@@ -79,6 +93,32 @@ export async function upsertPushSubscription(
   without.push(next);
 
   return savePushStore({ subscriptions: without });
+}
+
+export async function updatePushSubscriptionReminder(
+  endpoint: string,
+  reminder: ReminderPreferences,
+): Promise<boolean> {
+  if (!endpoint) return false;
+
+  const store = await loadPushStore();
+  const index = store.subscriptions.findIndex((item) => item.endpoint === endpoint);
+  if (index === -1) return false;
+
+  store.subscriptions[index] = {
+    ...store.subscriptions[index],
+    reminder,
+  };
+
+  return savePushStore(store);
+}
+
+export async function getPushSubscription(
+  endpoint: string,
+): Promise<StoredPushSubscription | null> {
+  if (!endpoint) return null;
+  const store = await loadPushStore();
+  return store.subscriptions.find((item) => item.endpoint === endpoint) ?? null;
 }
 
 export async function removePushSubscription(endpoint: string): Promise<boolean> {

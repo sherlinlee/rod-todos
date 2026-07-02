@@ -1,4 +1,8 @@
 import type { PushSubscriptionPayload } from "@/lib/push-types";
+import {
+  getBrowserDefaultReminderPreferences,
+  type ReminderPreferences,
+} from "@/lib/reminder-prefs";
 import { getSiteConfig } from "@/lib/site";
 import { decodeVapidPublicKey, isValidVapidPublicKey } from "@/lib/vapid-utils";
 
@@ -166,7 +170,7 @@ async function createPushSubscription(publicKey: string) {
   }
 }
 
-export async function subscribeToPush() {
+export async function subscribeToPush(reminder?: ReminderPreferences) {
   const secureContextError = getPushSecureContextError();
   if (secureContextError) {
     throw new Error("insecure_context");
@@ -188,10 +192,11 @@ export async function subscribeToPush() {
 
   const subscription = await createPushSubscription(publicKey);
   const payload = subscriptionPayload(subscription);
+  const reminderPrefs = reminder ?? getBrowserDefaultReminderPreferences();
   const res = await fetch("/api/push/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, reminder: reminderPrefs }),
   });
 
   if (!res.ok) {
@@ -262,6 +267,43 @@ export async function sendTestPush(): Promise<{
   }
 
   return { sent, total, shownLocally };
+}
+
+export function getBrowserTimezone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+export async function fetchReminderPreferences(endpoint: string) {
+  const res = await fetch(
+    `/api/push/reminder?endpoint=${encodeURIComponent(endpoint)}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) return null;
+  const json = (await res.json()) as {
+    ok?: boolean;
+    reminder?: ReminderPreferences;
+  };
+  if (!json.ok || !json.reminder) return null;
+  return json.reminder;
+}
+
+export async function saveReminderPreferences(
+  endpoint: string,
+  reminder: ReminderPreferences,
+) {
+  const res = await fetch("/api/push/reminder", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ endpoint, reminder }),
+  });
+  if (!res.ok) {
+    throw new Error("save_failed");
+  }
+  const json = (await res.json()) as { ok?: boolean; reminder?: ReminderPreferences };
+  if (!json.ok || !json.reminder) {
+    throw new Error("save_failed");
+  }
+  return json.reminder;
 }
 
 export async function syncPushSubscriptionState() {

@@ -2,6 +2,12 @@ import { getSiteConfig } from "@/lib/site";
 import { loadSyncData } from "@/lib/server/store";
 import type { PushMessage } from "@/lib/push-types";
 import type { Todo } from "@/lib/types";
+import {
+  getDefaultReminderPreferences,
+  normalizeReminderPreferences,
+  type ReminderPreferences,
+} from "@/lib/reminder-prefs";
+import type { StoredPushSubscription } from "@/lib/push-types";
 
 function todayInTimezone(timeZone: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -15,15 +21,6 @@ function todayInTimezone(timeZone: string): string {
   const month = parts.find((part) => part.type === "month")?.value ?? "01";
   const day = parts.find((part) => part.type === "day")?.value ?? "01";
   return `${year}-${month}-${day}`;
-}
-
-function hourInTimezone(timeZone: string): number {
-  const hour = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour: "numeric",
-    hour12: false,
-  }).format(new Date());
-  return Number(hour);
 }
 
 function isDueToday(todo: Todo, today: string) {
@@ -53,41 +50,30 @@ function summarizeTodos(todos: Todo[], limit = 3) {
   return preview;
 }
 
+/** @deprecated Use per-subscription reminder prefs instead. */
 export function getReminderTimezone() {
-  return (
-    process.env.PUSH_REMINDER_TIMEZONE?.trim() ||
-    process.env.APP_TIMEZONE?.trim() ||
-    "Asia/Singapore"
-  );
+  return getDefaultReminderPreferences().timezone;
 }
 
+/** @deprecated Use per-subscription reminder prefs instead. */
 export function getReminderHour() {
-  const parsed = Number(process.env.PUSH_REMINDER_HOUR ?? "8");
-  if (!Number.isFinite(parsed)) return 8;
-  return Math.min(23, Math.max(0, Math.floor(parsed)));
+  return getDefaultReminderPreferences().hour;
 }
 
-export function shouldSendScheduledReminders(now = new Date()) {
-  const timeZone = getReminderTimezone();
-  const targetHour = getReminderHour();
-  const currentHour = hourInTimezone(timeZone);
-  if (currentHour !== targetHour) return false;
-
-  const minute = Number(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      minute: "numeric",
-    }).format(now),
-  );
-  return minute < 15;
+export function getSubscriptionReminderPreferences(
+  subscription: StoredPushSubscription,
+): ReminderPreferences {
+  return normalizeReminderPreferences(subscription.reminder);
 }
 
-export async function buildDailyReminderMessage(): Promise<PushMessage | null> {
+export async function buildDailyReminderMessage(
+  timeZone: string,
+): Promise<PushMessage | null> {
   const site = getSiteConfig();
   const sync = await loadSyncData();
   if (!sync) return null;
 
-  const today = todayInTimezone(getReminderTimezone());
+  const today = todayInTimezone(timeZone);
   const dueToday = sync.todos.filter((todo) => isDueToday(todo, today));
   const overdue = sync.todos.filter((todo) => isOverdue(todo, today));
 

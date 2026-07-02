@@ -3,11 +3,14 @@ import type { NextRequest } from "next/server";
 import { isRequestAuthenticated } from "@/lib/server/request-auth";
 import { getVapidPublicKey, getVapidConfigError, isPushConfigured } from "@/lib/server/push-config";
 import { upsertPushSubscription } from "@/lib/server/push-store";
+import { parseReminderPreferences } from "@/lib/reminder-prefs";
 import type { PushSubscriptionPayload } from "@/lib/push-types";
 
 function parseSubscription(body: unknown): PushSubscriptionPayload | null {
   if (!body || typeof body !== "object") return null;
-  const raw = body as Partial<PushSubscriptionPayload>;
+  const raw = body as Partial<PushSubscriptionPayload> & {
+    reminder?: unknown;
+  };
   if (
     typeof raw.endpoint !== "string" ||
     !raw.keys ||
@@ -17,6 +20,10 @@ function parseSubscription(body: unknown): PushSubscriptionPayload | null {
     return null;
   }
 
+  const reminder = raw.reminder
+    ? parseReminderPreferences(raw.reminder)
+    : undefined;
+
   return {
     endpoint: raw.endpoint,
     keys: {
@@ -24,6 +31,7 @@ function parseSubscription(body: unknown): PushSubscriptionPayload | null {
       auth: raw.keys.auth,
     },
     expirationTime: raw.expirationTime ?? null,
+    reminder: reminder ?? undefined,
   };
 }
 
