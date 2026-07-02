@@ -130,7 +130,6 @@ export default function PushNotificationToggle() {
       const next = await syncPushSubscriptionState();
       if (cancelled) return;
 
-      setStatus(next);
       if (next === "enabled") {
         const subscription = await getCurrentPushSubscription();
         if (subscription && !cancelled) {
@@ -138,6 +137,8 @@ export default function PushNotificationToggle() {
           await loadReminderForSubscription(subscription.endpoint);
         }
       }
+
+      if (!cancelled) setStatus(next);
     }
 
     void load();
@@ -147,13 +148,17 @@ export default function PushNotificationToggle() {
   }, [loadReminderForSubscription]);
 
   async function persistReminder(next: ReminderPreferences) {
-    if (!endpoint) return;
+    const subscription = await getCurrentPushSubscription();
+    const activeEndpoint = subscription?.endpoint ?? endpoint;
+    if (!activeEndpoint) return;
+
     setSavingReminder(true);
     setError(null);
     const withTimezone = { ...next, timezone: getBrowserTimezone() };
     try {
-      const saved = await saveReminderPreferences(endpoint, withTimezone);
+      const saved = await saveReminderPreferences(activeEndpoint, withTimezone);
       setReminder(saved);
+      if (!endpoint) setEndpoint(activeEndpoint);
       setMessage(`Reminder set for ${formatReminderTime(saved)}`);
     } catch {
       setError("Could not save reminder time");
@@ -298,7 +303,7 @@ export default function PushNotificationToggle() {
               id="reminder-hour"
               value={reminder.hour}
               onChange={(e) => updateReminderHour(Number(e.target.value))}
-              disabled={busy || status === "denied"}
+              disabled={busy || status === "denied" || (status === "enabled" && !endpoint)}
               className={selectClassName}
             >
               {HOUR_OPTIONS.map((hour) => (
@@ -315,7 +320,7 @@ export default function PushNotificationToggle() {
               id="reminder-minute"
               value={reminder.minute}
               onChange={(e) => updateReminderMinute(Number(e.target.value))}
-              disabled={busy || status === "denied"}
+              disabled={busy || status === "denied" || (status === "enabled" && !endpoint)}
               className={selectClassName}
             >
               {REMINDER_MINUTES.map((minute) => (

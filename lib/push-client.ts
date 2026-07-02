@@ -1,6 +1,7 @@
 import type { PushSubscriptionPayload } from "@/lib/push-types";
 import {
   getBrowserDefaultReminderPreferences,
+  parseReminderPreferences,
   type ReminderPreferences,
 } from "@/lib/reminder-prefs";
 import { getSiteConfig } from "@/lib/site";
@@ -10,6 +11,36 @@ const SW_URL = "/sw.js";
 
 function pushEndpointStorageKey() {
   return `${getSiteConfig().owner}-push-endpoint`;
+}
+
+function pushReminderStorageKey() {
+  return `${getSiteConfig().owner}-push-reminder`;
+}
+
+type StoredPushReminder = {
+  endpoint: string;
+  reminder: ReminderPreferences;
+};
+
+function storeReminderLocally(endpoint: string, reminder: ReminderPreferences) {
+  try {
+    const payload: StoredPushReminder = { endpoint, reminder };
+    localStorage.setItem(pushReminderStorageKey(), JSON.stringify(payload));
+  } catch {
+    /* ignore */
+  }
+}
+
+function loadReminderLocally(endpoint: string): ReminderPreferences | null {
+  try {
+    const raw = localStorage.getItem(pushReminderStorageKey());
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredPushReminder;
+    if (parsed.endpoint !== endpoint) return null;
+    return parseReminderPreferences(parsed.reminder);
+  } catch {
+    return null;
+  }
 }
 
 function productionUrl() {
@@ -196,6 +227,7 @@ export async function subscribeToPush(reminder?: ReminderPreferences) {
   const res = await fetch("/api/push/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({ ...payload, reminder: reminderPrefs }),
   });
 
@@ -204,6 +236,7 @@ export async function subscribeToPush(reminder?: ReminderPreferences) {
   }
 
   storePushEndpoint(payload.endpoint);
+  storeReminderLocally(payload.endpoint, reminderPrefs);
   return payload.endpoint;
 }
 
@@ -274,9 +307,18 @@ export function getBrowserTimezone() {
 }
 
 export async function fetchReminderPreferences(endpoint: string) {
+  const fromServer = await fetchReminderPreferencesFromServer(endpoint);
+  if (fromServer) {
+    storeReminderLocally(endpoint, fromServer);
+    return fromServer;
+  }
+  return loadReminderLocally(endpoint);
+}
+
+async function fetchReminderPreferencesFromServer(endpoint: string) {
   const res = await fetch(
     `/api/push/reminder?endpoint=${encodeURIComponent(endpoint)}`,
-    { cache: "no-store" },
+    { cache: "no-store", credentials: "include" },
   );
   if (!res.ok) return null;
   const json = (await res.json()) as {
@@ -291,19 +333,41 @@ export async function saveReminderPreferences(
   endpoint: string,
   reminder: ReminderPreferences,
 ) {
-  const res = await fetch("/api/push/reminder", {
+  const subscription = await getCurrentPushSubscription();
+  if (!subscription || subscription.endpoint !== endpoint) {
+    throw new Error("save_failed");
+  }
+
+  // Upsert via /api/push/subscribe so save works even when the subscription
+  // exists in the browser but was never registered (or was lost) on the server.
+  await ensurePushSubscriptionOnServer(subscription, reminder);
+  return reminder;
+}
+
+/** Upsert an existing browser subscription on the server without rotating it. */
+async function ensurePushSubscriptionOnServer(
+  subscription: PushSubscription,
+  reminder?: ReminderPreferences,
+) {
+  const payload = subscriptionPayload(subscription);
+  const reminderPrefs =
+    reminder ??
+    (await fetchReminderPreferencesFromServer(payload.endpoint)) ??
+    loadReminderLocally(payload.endpoint) ??
+    getBrowserDefaultReminderPreferences();
+
+  const res = await fetch("/api/push/subscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ endpoint, reminder }),
+    credentials: "include",
+    body: JSON.stringify({ ...payload, reminder: reminderPrefs }),
   });
   if (!res.ok) {
-    throw new Error("save_failed");
+    throw new Error("subscribe_failed");
   }
-  const json = (await res.json()) as { ok?: boolean; reminder?: ReminderPreferences };
-  if (!json.ok || !json.reminder) {
-    throw new Error("save_failed");
-  }
-  return json.reminder;
+
+  storePushEndpoint(payload.endpoint);
+  storeReminderLocally(payload.endpoint, reminderPrefs);
 }
 
 export async function syncPushSubscriptionState() {
@@ -317,14 +381,12 @@ export async function syncPushSubscriptionState() {
   const subscription = await getCurrentPushSubscription();
   if (!subscription) return "default" as const;
 
-  const endpoint = subscription.endpoint;
-  const stored = await getStoredPushEndpoint();
-  if (stored !== endpoint) {
-    try {
-      await subscribeToPush();
-    } catch {
-      return "default" as const;
-    }
+  try {
+    // Always re-upsert so browser and server stay in sync — not only when
+    // localStorage is missing the endpoint.
+    await ensurePushSubscriptionOnServer(subscription);
+  } catch {
+    return "default" as const;
   }
 
   return "enabled" as const;
