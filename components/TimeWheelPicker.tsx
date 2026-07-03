@@ -24,8 +24,8 @@ import {
   type WheelPeriod,
 } from "@/lib/time-wheel";
 
-export const WHEEL_ITEM_HEIGHT = 32;
-const WHEEL_VISIBLE_ROWS = 5;
+export const WHEEL_ITEM_HEIGHT = 26;
+const WHEEL_VISIBLE_ROWS = 3;
 const WHEEL_PAD_ROWS = Math.floor(WHEEL_VISIBLE_ROWS / 2);
 /** Distance from the viewport top to the selection band center. */
 const WHEEL_SELECTION_CENTER = WHEEL_PAD_ROWS * WHEEL_ITEM_HEIGHT;
@@ -304,7 +304,7 @@ function WheelColumn<T extends string | number>({
               key={`${String(item)}-${index}`}
               role="option"
               aria-selected={selected}
-              className={`wheel-column-item flex items-center justify-center px-0.5 text-[17px] leading-none ${
+              className={`wheel-column-item flex items-center justify-center px-0.5 text-[15px] leading-none ${
                 selected
                   ? "font-semibold text-foreground opacity-100"
                   : "font-normal text-foreground/35"
@@ -431,11 +431,11 @@ const TimeWheelPicker = forwardRef<TimeWheelPickerHandle, TimeWheelPickerProps>(
         role="group"
         aria-label={ariaLabel}
         aria-disabled={disabled || undefined}
-        className={`time-wheel-picker relative overflow-hidden rounded-xl border border-accent-soft/25 bg-card/90 ${className}`}
+        className={`time-wheel-picker relative overflow-hidden rounded-lg border border-accent-soft/25 bg-card/90 ${className}`}
       >
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-4 top-1/2 z-10 h-8 -translate-y-1/2 rounded-lg border border-accent-soft/20 bg-accent-soft/10"
+          className="pointer-events-none absolute inset-x-3 top-1/2 z-10 h-6 -translate-y-1/2 rounded-md border border-accent-soft/20 bg-accent-soft/10"
         />
         <div
           aria-hidden
@@ -458,7 +458,7 @@ const TimeWheelPicker = forwardRef<TimeWheelPickerHandle, TimeWheelPickerProps>(
 
           <div
             aria-hidden
-            className="flex w-2 shrink-0 items-center justify-center text-[17px] font-semibold text-foreground/70"
+            className="flex w-1.5 shrink-0 items-center justify-center text-[15px] font-semibold text-foreground/70"
           >
             :
           </div>
@@ -490,7 +490,7 @@ const TimeWheelPicker = forwardRef<TimeWheelPickerHandle, TimeWheelPickerProps>(
           />
         </div>
 
-        <p className="px-3 pb-2 text-center text-xs font-semibold text-accent">
+        <p className="px-2 pb-1 text-center text-[11px] font-semibold text-accent">
           {selection.label12}
         </p>
       </div>
