@@ -41,6 +41,10 @@ function isRemoved(
   return deletedAt !== undefined && deletedAt >= updatedAt;
 }
 
+function ideaUpdatedAt(idea: Idea): number {
+  return idea.updatedAt ?? idea.createdAt;
+}
+
 function filterTombstonedTodos(
   todos: Todo[],
   tombstones: Map<string, number>,
@@ -177,7 +181,7 @@ export function mergeSyncData(
 
   const todoLocalRevision = contentRevision(userTodoTimestamps(local.todos));
   const ideaLocalRevision = contentRevision(
-    local.ideas.map((idea) => idea.createdAt),
+    local.ideas.map(ideaUpdatedAt),
   );
 
   let todos = ensureEssentials(
@@ -218,11 +222,11 @@ export function mergeSyncData(
   const ideas = mergeById(
     local.ideas,
     cloud.ideas,
-    (idea) => idea.createdAt,
+    ideaUpdatedAt,
     ideaLocalRevision,
     (idea) => `idea:${idea.id}`,
     tombstoneLookup,
-  ).sort((a, b) => b.createdAt - a.createdAt);
+  ).sort((a, b) => ideaUpdatedAt(b) - ideaUpdatedAt(a));
 
   const journalLocalRevision = local.updatedAt;
 

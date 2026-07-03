@@ -2,6 +2,7 @@ export type Idea = {
   id: string;
   text: string;
   createdAt: number;
+  updatedAt?: number;
 };
 
 const STORAGE_KEY = "to-dos-ideas";

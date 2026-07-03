@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCloudRefresh } from "@/hooks/useCloudRefresh";
 import SiteAvatar from "@/components/SiteAvatar";
 import BottomNav from "@/components/BottomNav";
@@ -8,12 +8,18 @@ import EntryActionButtons from "@/components/EntryActionButtons";
 import MicButton from "@/components/MicButton";
 import { copyText } from "@/lib/copy";
 import { type Idea, loadIdeas, saveIdeas } from "@/lib/ideas";
+import { mergeSyncData } from "@/lib/sync-merge";
 import { formatSiteDecor, getSiteConfig } from "@/lib/site";
 import {
+  applyCloudData,
+  buildLocalSnapshot,
   hydrateFromCloud,
+  ideaTombstoneKey,
   pushSyncNow,
   readLocalJournal,
   readLocalTodos,
+  readLocalTombstones,
+  recordTombstone,
   refreshFromCloud,
   scheduleCloudPush,
   touchSyncMeta,
@@ -23,6 +29,11 @@ function createId() {
   return crypto.randomUUID();
 }
 
+function localIdeasRevision(ideas: Idea[]) {
+  if (ideas.length === 0) return 0;
+  return Math.max(...ideas.map((idea) => idea.updatedAt ?? idea.createdAt));
+}
+
 export default function IdeaFlowApp() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [input, setInput] = useState("");
@@ -30,12 +41,35 @@ export default function IdeaFlowApp() {
   const [hydrated, setHydrated] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
+  const ideasRef = useRef<Idea[]>([]);
 
   const displayInput = liveTranscript
     ? input
       ? `${input} ${liveTranscript}`
       : liveTranscript
     : input;
+
+  function persistIdeas(next: Idea[], syncNow = false) {
+    ideasRef.current = next;
+    saveIdeas(next);
+    touchSyncMeta();
+    const payload = {
+      todos: readLocalTodos(),
+      ideas: next,
+      journal: readLocalJournal(),
+      tombstones: readLocalTombstones(),
+      updatedAt: Date.now(),
+    };
+    if (syncNow) {
+      pushSyncNow(payload);
+    } else {
+      scheduleCloudPush(() => payload);
+    }
+  }
+
+  useEffect(() => {
+    ideasRef.current = ideas;
+  }, [ideas]);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,10 +79,13 @@ export default function IdeaFlowApp() {
         const data = await hydrateFromCloud();
         if (!cancelled) {
           setIdeas(data.ideas);
+          ideasRef.current = data.ideas;
         }
       } catch {
         if (!cancelled) {
-          setIdeas(loadIdeas());
+          const local = loadIdeas();
+          setIdeas(local);
+          ideasRef.current = local;
         }
       } finally {
         if (!cancelled) setHydrated(true);
@@ -63,7 +100,24 @@ export default function IdeaFlowApp() {
 
   const onCloudRefresh = useCallback(
     (data: Awaited<ReturnType<typeof refreshFromCloud>>) => {
-      if (data && editingId === null) setIdeas(data.ideas);
+      if (!data || editingId !== null) return;
+
+      const localSnapshot = buildLocalSnapshot();
+      const merged = mergeSyncData(
+        {
+          ...localSnapshot,
+          ideas: ideasRef.current,
+          updatedAt: Math.max(
+            localSnapshot.updatedAt,
+            localIdeasRevision(ideasRef.current),
+          ),
+        },
+        data,
+      );
+
+      applyCloudData(merged);
+      ideasRef.current = merged.ideas;
+      setIdeas(merged.ideas);
     },
     [editingId],
   );
@@ -72,35 +126,30 @@ export default function IdeaFlowApp() {
 
   useEffect(() => {
     if (!hydrated) return;
-    saveIdeas(ideas);
-    touchSyncMeta();
-    scheduleCloudPush(() => ({
-      todos: readLocalTodos(),
-      ideas,
-      journal: readLocalJournal(),
-      updatedAt: Date.now(),
-    }));
+    const handle = window.setTimeout(() => {
+      saveIdeas(ideas);
+      scheduleCloudPush(() => ({
+        todos: readLocalTodos(),
+        ideas,
+        journal: readLocalJournal(),
+        tombstones: readLocalTombstones(),
+        updatedAt: Date.now(),
+      }));
+    }, 0);
+    return () => window.clearTimeout(handle);
   }, [ideas, hydrated]);
-
-  function syncIdeasNow(nextIdeas: Idea[]) {
-    saveIdeas(nextIdeas);
-    pushSyncNow({
-      todos: readLocalTodos(),
-      ideas: nextIdeas,
-      journal: readLocalJournal(),
-      updatedAt: Date.now(),
-    });
-  }
 
   function addIdea(e?: React.FormEvent) {
     e?.preventDefault();
     const text = input.trim();
     if (!text) return;
 
-    setIdeas((prev) => [
+    const next = [
       { id: createId(), text, createdAt: Date.now() },
-      ...prev,
-    ]);
+      ...ideasRef.current,
+    ];
+    setIdeas(next);
+    persistIdeas(next, true);
     setInput("");
   }
 
@@ -121,13 +170,12 @@ export default function IdeaFlowApp() {
       return;
     }
 
-    setIdeas((prev) => {
-      const next = prev.map((idea) =>
-        idea.id === editingId ? { ...idea, text } : idea,
-      );
-      syncIdeasNow(next);
-      return next;
-    });
+    const now = Date.now();
+    const next = ideasRef.current.map((idea) =>
+      idea.id === editingId ? { ...idea, text, updatedAt: now } : idea,
+    );
+    setIdeas(next);
+    persistIdeas(next, true);
     setEditingId(null);
     setEditDraft("");
   }
@@ -144,11 +192,11 @@ export default function IdeaFlowApp() {
   function deleteIdea(id: string) {
     if (!window.confirm("delete entry?")) return;
 
-    setIdeas((prev) => {
-      const next = prev.filter((idea) => idea.id !== id);
-      syncIdeasNow(next);
-      return next;
-    });
+    recordTombstone(ideaTombstoneKey(id));
+
+    const next = ideasRef.current.filter((idea) => idea.id !== id);
+    setIdeas(next);
+    persistIdeas(next, true);
 
     if (editingId === id) {
       setEditingId(null);

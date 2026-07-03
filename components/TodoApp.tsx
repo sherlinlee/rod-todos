@@ -45,10 +45,9 @@ import {
   scheduleCloudPush,
   todoTombstoneKey,
   touchSyncMeta,
-  writeLocalIdeas,
-  writeLocalJournal,
   writeLocalTodos,
   buildLocalSnapshot,
+  applyCloudData,
 } from "@/lib/sync-client";
 import type {
   Category,
@@ -173,7 +172,6 @@ export default function TodoApp() {
 
       const lastEdit = lastEditRef.current;
       if (lastEdit != null && Date.now() - lastEdit.at < 15_000) {
-        writeLocalTodos(todosRef.current);
         return;
       }
 
@@ -190,8 +188,8 @@ export default function TodoApp() {
         data,
       );
 
+      applyCloudData(merged);
       todosRef.current = merged.todos;
-      writeLocalTodos(merged.todos);
       setTodos(merged.todos);
     },
     [],
@@ -334,11 +332,13 @@ export default function TodoApp() {
 
     if (target.permanent) {
       if (target.completed) {
-        setTodos((prev) =>
-          prev.map((t) =>
-            t.id === id ? uncompletePermanentTodo(t) : t,
-          ),
+        const next = todosRef.current.map((t) =>
+          t.id === id
+            ? { ...uncompletePermanentTodo(t), updatedAt: Date.now() }
+            : t,
         );
+        setTodos(next);
+        persistTodos(next, true);
         return;
       }
 
@@ -346,20 +346,27 @@ export default function TodoApp() {
       lastToggleRef.current = { id, expectedCompleted: true, at: Date.now() };
       hapticComplete();
       window.setTimeout(() => {
-        setTodos((prev) =>
-          prev.map((t) =>
-            t.id === id ? completePermanentTodo(t) : t,
-          ),
-        );
+        setTodos((prev) => {
+          const next = prev.map((t) =>
+            t.id === id
+              ? { ...completePermanentTodo(t), updatedAt: Date.now() }
+              : t,
+          );
+          persistTodos(next, true);
+          return next;
+        });
         window.setTimeout(() => setCompletingId(null), COMPLETE_FLY_MS);
       }, CHECK_FEEDBACK_MS);
       return;
     }
 
     if (target.completed) {
-      setTodos((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, completed: false } : t)),
+      lastToggleRef.current = { id, expectedCompleted: false, at: Date.now() };
+      const next = todosRef.current.map((t) =>
+        t.id === id ? { ...t, completed: false, updatedAt: Date.now() } : t,
       );
+      setTodos(next);
+      persistTodos(next, true);
       return;
     }
 
@@ -373,9 +380,13 @@ export default function TodoApp() {
       ) === 0;
 
     window.setTimeout(() => {
-      setTodos((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, completed: true } : t)),
-      );
+      setTodos((prev) => {
+        const next = prev.map((t) =>
+          t.id === id ? { ...t, completed: true, updatedAt: Date.now() } : t,
+        );
+        persistTodos(next, true);
+        return next;
+      });
 
       if (!wasAllDoneForToday) {
         startTransition(() => celebrate(false));
@@ -431,9 +442,17 @@ export default function TodoApp() {
   }
 
   function clearCompleted() {
-    setTodos((prev) =>
-      prev.filter((t) => !t.completed || isPermanentTodo(t)),
+    for (const todo of todosRef.current) {
+      if (todo.completed && !isPermanentTodo(todo)) {
+        recordTombstone(todoTombstoneKey(todo.id));
+      }
+    }
+
+    const next = todosRef.current.filter(
+      (t) => !t.completed || isPermanentTodo(t),
     );
+    setTodos(next);
+    persistTodos(next, true);
   }
 
   function handleReorder(activeId: string, overId: string) {

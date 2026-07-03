@@ -218,11 +218,6 @@ async function pushCloudSyncMerged(local: RodSyncData): Promise<boolean> {
       return true;
     }
 
-    if (!hasUserTodos(merged) && hasUserTodos(cloud)) {
-      applyCloudData(merged);
-      return true;
-    }
-
     const payload = { ...merged, updatedAt: Date.now() };
     applyCloudData(payload);
     return pushCloudSync(payload);
@@ -289,9 +284,7 @@ export async function refreshFromCloud(): Promise<RodSyncData | null> {
   const cloud = await fetchCloudSync();
   if (!cloud) return null;
 
-  const merged = mergeSyncData(local, cloud);
-  applyCloudData(merged);
-  return merged;
+  return mergeSyncData(local, cloud);
 }
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;

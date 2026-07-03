@@ -6,7 +6,7 @@ import {
   loadSyncData,
   saveSyncData,
 } from "@/lib/server/store";
-import { mergeSyncData, hasUserTodos } from "@/lib/sync-merge";
+import { mergeSyncData } from "@/lib/sync-merge";
 import { ensureEssentials } from "@/lib/essentials";
 import { migrateTodos } from "@/lib/migrate";
 import type { RodSyncData, SyncTombstone } from "@/lib/sync-types";
@@ -107,14 +107,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const existing = await loadSyncData();
-  let merged = existing ? mergeSyncData(parsed, existing) : parsed;
-
-  if (existing && !hasUserTodos(merged) && hasUserTodos(existing)) {
-    merged = {
-      ...merged,
-      todos: ensureEssentials(migrateTodos(existing.todos)),
-    };
-  }
+  const merged = existing ? mergeSyncData(parsed, existing) : parsed;
 
   const payload = { ...merged, updatedAt: Date.now() };
 

@@ -23,6 +23,7 @@ import {
   type JournalEntry,
 } from "@/lib/journal";
 import {
+  applyCloudData,
   hydrateFromCloud,
   journalEntryTombstoneKey,
   pushSyncNow,
@@ -148,6 +149,7 @@ export default function NotesApp() {
         if (draft.trim() && draft !== remote) return;
       }
 
+      applyCloudData(data);
       setEntries(data.journal);
       if (active) {
         setDraftText(entryById(data.journal, active)?.text ?? draft);
