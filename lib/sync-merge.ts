@@ -5,6 +5,9 @@ import { migrateTodos } from "@/lib/migrate";
 import type { RodSyncData, SyncTombstone } from "@/lib/sync-types";
 import type { Todo } from "@/lib/types";
 
+const JOURNAL_ENTRY_TOMBSTONE_PREFIX = "journal-entry:";
+const JOURNAL_DATE_TOMBSTONE_PREFIX = "journal:";
+
 function todoUpdatedAt(todo: Todo): number {
   return todo.updatedAt ?? todo.createdAt;
 }
@@ -77,14 +80,50 @@ function mergeById<T extends { id: string }>(
 function mergeJournal(
   local: JournalEntry[],
   cloud: JournalEntry[],
+  tombstones: Map<string, number>,
+  localRevision: number,
 ): JournalEntry[] {
+  const localNormalized = normalizeJournalEntries(local);
+  const cloudNormalized = normalizeJournalEntries(cloud);
+  const localIds = new Set(localNormalized.map((entry) => entry.id));
   const map = new Map<string, JournalEntry>();
 
-  for (const entry of normalizeJournalEntries([...local, ...cloud])) {
-    const existing = map.get(entry.id);
-    if (!existing || entry.updatedAt > existing.updatedAt) {
-      map.set(entry.id, entry);
+  for (const entry of localNormalized) {
+    const entryKey = `${JOURNAL_ENTRY_TOMBSTONE_PREFIX}${entry.id}`;
+    const legacyDateKey = `${JOURNAL_DATE_TOMBSTONE_PREFIX}${entry.date}`;
+    if (
+      isRemoved(entryKey, entry.updatedAt, tombstones) ||
+      isRemoved(legacyDateKey, entry.updatedAt, tombstones)
+    ) {
+      continue;
     }
+    map.set(entry.id, entry);
+  }
+
+  for (const entry of cloudNormalized) {
+    const entryKey = `${JOURNAL_ENTRY_TOMBSTONE_PREFIX}${entry.id}`;
+    const legacyDateKey = `${JOURNAL_DATE_TOMBSTONE_PREFIX}${entry.date}`;
+    if (
+      isRemoved(entryKey, entry.updatedAt, tombstones) ||
+      isRemoved(legacyDateKey, entry.updatedAt, tombstones)
+    ) {
+      continue;
+    }
+
+    const existing = map.get(entry.id);
+    if (existing) {
+      if (entry.updatedAt > existing.updatedAt) {
+        map.set(entry.id, entry);
+      }
+      continue;
+    }
+
+    // Local sync is newer and omits this entry — don't resurrect deletes from cloud.
+    if (!localIds.has(entry.id) && localRevision > entry.updatedAt) {
+      continue;
+    }
+
+    map.set(entry.id, entry);
   }
 
   return [...map.values()].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -165,7 +204,14 @@ export function mergeSyncData(
     tombstoneLookup,
   ).sort((a, b) => b.createdAt - a.createdAt);
 
-  const journal = mergeJournal(local.journal ?? [], cloud.journal ?? []);
+  const journalLocalRevision = local.updatedAt;
+
+  const journal = mergeJournal(
+    local.journal ?? [],
+    cloud.journal ?? [],
+    tombstoneLookup,
+    journalLocalRevision,
+  );
 
   return {
     todos,

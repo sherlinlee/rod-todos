@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SiteAvatar from "@/components/SiteAvatar";
 import BottomNav from "@/components/BottomNav";
+import EntryDeletePrompt from "@/components/EntryDeletePrompt";
 import EntryActionButtons from "@/components/EntryActionButtons";
 import NotesArchive from "@/components/NotesArchive";
 import MicButton from "@/components/MicButton";
@@ -23,9 +24,12 @@ import {
 } from "@/lib/journal";
 import {
   hydrateFromCloud,
+  journalEntryTombstoneKey,
   pushSyncNow,
   readLocalIdeas,
   readLocalTodos,
+  readLocalTombstones,
+  recordTombstone,
   refreshFromCloud,
   scheduleCloudPush,
   touchSyncMeta,
@@ -43,6 +47,7 @@ export default function NotesApp() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const skipSaveIndicator = useRef(true);
   const prevToday = useRef(today);
   const [draftText, setDraftText] = useState("");
@@ -161,6 +166,7 @@ export default function NotesApp() {
       todos: readLocalTodos(),
       ideas: readLocalIdeas(),
       journal: entries,
+      tombstones: readLocalTombstones(),
       updatedAt: Date.now(),
     }));
 
@@ -180,16 +186,7 @@ export default function NotesApp() {
 
   function persistDraft(text: string, date: string, noteId: string | null) {
     if (!text.trim()) {
-      if (noteId) {
-        setEntries((prev) => {
-          const next = deleteJournalEntry(prev, noteId);
-          saveJournal(next);
-          return next;
-        });
-        setActiveNoteId(null);
-        activeNoteIdRef.current = null;
-      }
-      setSaveStatus("idle");
+      setSaveStatus(noteId ? "saved" : "idle");
       return;
     }
 
@@ -300,7 +297,19 @@ export default function NotesApp() {
       setDraftText(textToSave);
     }
 
-    persistDraft(textToSave, writingDate, activeNoteIdRef.current);
+    const noteId = activeNoteIdRef.current;
+    if (!textToSave.trim() && noteId) {
+      const saved = entryById(entries, noteId);
+      if (saved) {
+        setDraftText(saved.text);
+        draftTextRef.current = saved.text;
+      }
+      setSaveStatus("saved");
+      isEditingRef.current = false;
+      return;
+    }
+
+    persistDraft(textToSave, writingDate, noteId);
     isEditingRef.current = false;
   }
 
@@ -345,16 +354,19 @@ export default function NotesApp() {
       todos: readLocalTodos(),
       ideas: readLocalIdeas(),
       journal,
+      tombstones: readLocalTombstones(),
       updatedAt: Date.now(),
     });
   }
 
-  function copyNote(text: string) {
-    void copyText(text);
+  function requestDeleteNote(id: string) {
+    setPendingDeleteId(id);
   }
 
-  function deleteNote(id: string) {
-    if (!window.confirm("delete entry?")) return;
+  function confirmDeleteNote() {
+    const id = pendingDeleteId;
+    if (!id) return;
+    setPendingDeleteId(null);
 
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
@@ -362,8 +374,11 @@ export default function NotesApp() {
     }
 
     isEditingRef.current = false;
+    isFocusedRef.current = false;
     setLiveTranscript("");
     skipSaveIndicator.current = true;
+
+    recordTombstone(journalEntryTombstoneKey(id));
 
     setEntries((prev) => {
       const next = deleteJournalEntry(prev, id);
@@ -374,6 +389,14 @@ export default function NotesApp() {
     if (activeNoteIdRef.current === id) {
       resetComposer();
     }
+  }
+
+  function cancelDeleteNote() {
+    setPendingDeleteId(null);
+  }
+
+  function copyNote(text: string) {
+    void copyText(text);
   }
 
   const hasDraftContent = Boolean(draftText.trim());
@@ -492,18 +515,24 @@ export default function NotesApp() {
                       </button>
                     </>
                   )}
-                  {activeNoteId && (
-                    <EntryActionButtons
-                      onCopy={() =>
-                        copyNote(
-                          draftText.trim() ||
-                            entryById(entries, activeNoteId)?.text ||
-                            "",
-                        )
-                      }
-                      onDelete={() => deleteNote(activeNoteId)}
-                    />
-                  )}
+                  {activeNoteId &&
+                    (pendingDeleteId === activeNoteId ? (
+                      <EntryDeletePrompt
+                        onConfirm={confirmDeleteNote}
+                        onCancel={cancelDeleteNote}
+                      />
+                    ) : (
+                      <EntryActionButtons
+                        onCopy={() =>
+                          copyNote(
+                            draftText.trim() ||
+                              entryById(entries, activeNoteId)?.text ||
+                              "",
+                          )
+                        }
+                        onDelete={() => requestDeleteNote(activeNoteId)}
+                      />
+                    ))}
                 </div>
                 <MicButton
                   onTranscript={appendTranscript}
@@ -547,11 +576,18 @@ export default function NotesApp() {
                           {preview}
                         </p>
                       </button>
-                      <EntryActionButtons
-                        onEdit={() => selectNote(note.id)}
-                        onCopy={() => copyNote(preview)}
-                        onDelete={() => deleteNote(note.id)}
-                      />
+                      {pendingDeleteId === note.id ? (
+                        <EntryDeletePrompt
+                          onConfirm={confirmDeleteNote}
+                          onCancel={cancelDeleteNote}
+                        />
+                      ) : (
+                        <EntryActionButtons
+                          onEdit={() => selectNote(note.id)}
+                          onCopy={() => copyNote(preview)}
+                          onDelete={() => requestDeleteNote(note.id)}
+                        />
+                      )}
                     </div>
                   </li>
                 );
@@ -566,9 +602,12 @@ export default function NotesApp() {
           today={today}
           activeNoteId={activeNoteId}
           editingText={draftText}
+          pendingDeleteId={pendingDeleteId}
           onSelectNote={selectNote}
           onCopyNote={copyNote}
-          onDeleteNote={deleteNote}
+          onDeleteNote={requestDeleteNote}
+          onConfirmDelete={confirmDeleteNote}
+          onCancelDelete={cancelDeleteNote}
         />
       </main>
 

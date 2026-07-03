@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import EntryActionButtons from "@/components/EntryActionButtons";
+import EntryDeletePrompt from "@/components/EntryDeletePrompt";
 import { formatNoteDate, formatNoteTime } from "@/lib/dates";
 import type { JournalYearGroup } from "@/lib/journal";
 
@@ -11,9 +12,12 @@ type NotesArchiveProps = {
   today: string;
   activeNoteId?: string | null;
   editingText?: string;
+  pendingDeleteId?: string | null;
   onSelectNote?: (id: string) => void;
   onCopyNote?: (text: string) => void;
   onDeleteNote?: (id: string) => void;
+  onConfirmDelete?: () => void;
+  onCancelDelete?: () => void;
 };
 
 const archivePillClass =
@@ -25,9 +29,12 @@ export default function NotesArchive({
   today,
   activeNoteId,
   editingText,
+  pendingDeleteId,
   onSelectNote,
   onCopyNote,
   onDeleteNote,
+  onConfirmDelete,
+  onCancelDelete,
 }: NotesArchiveProps) {
   const [open, setOpen] = useState(totalSaved > 0);
   const [expandedYears, setExpandedYears] = useState<Set<number>>(() => {
@@ -190,11 +197,18 @@ export default function NotesArchive({
                                               </span>
                                             )}
                                           </div>
-                                          <EntryActionButtons
-                                            onEdit={() => onSelectNote?.(entry.id)}
-                                            onCopy={() => onCopyNote?.(displayText)}
-                                            onDelete={() => onDeleteNote?.(entry.id)}
-                                          />
+                                          {pendingDeleteId === entry.id ? (
+                                            <EntryDeletePrompt
+                                              onConfirm={() => onConfirmDelete?.()}
+                                              onCancel={() => onCancelDelete?.()}
+                                            />
+                                          ) : (
+                                            <EntryActionButtons
+                                              onEdit={() => onSelectNote?.(entry.id)}
+                                              onCopy={() => onCopyNote?.(displayText)}
+                                              onDelete={() => onDeleteNote?.(entry.id)}
+                                            />
+                                          )}
                                         </div>
 
                                         {entryOpen ? (

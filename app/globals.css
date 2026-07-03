@@ -685,6 +685,21 @@ body.is-dragging .animate-pop-in {
   animation: fade-in 0.2s ease-out;
 }
 
+.wheel-column-scroll {
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.wheel-column-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel-column-item {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
 /* Belle weather widget */
 .wx-shell-belle {
   border-radius: 8px;

@@ -7,7 +7,7 @@ export type Todo = {
   createdAt: number;
   updatedAt?: number;
   dueDate: string | null;
-  /** "HH:MM" in 15-minute steps; only used when dueDate is set */
+  /** "HH:MM" in 5-minute steps; only used when dueDate is set */
   reminderTime?: string | null;
   /** YYYY-MM-DD when a per-task reminder last fired */
   lastRemindedDate?: string | null;

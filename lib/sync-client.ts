@@ -107,6 +107,11 @@ export function journalTombstoneKey(date: string) {
   return `journal:${date}`;
 }
 
+/** Per-note tombstone (multi-note journal). */
+export function journalEntryTombstoneKey(id: string) {
+  return `journal-entry:${id}`;
+}
+
 function readSyncMeta(): SyncMeta {
   try {
     const raw = localStorage.getItem(SYNC_META_KEY);

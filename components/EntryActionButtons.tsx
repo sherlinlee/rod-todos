@@ -1,3 +1,5 @@
+import type { MouseEvent } from "react";
+
 type EntryActionButtonsProps = {
   onEdit?: () => void;
   onCopy?: () => void;
@@ -7,6 +9,11 @@ type EntryActionButtonsProps = {
 
 const actionClass =
   "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm text-foreground/75 transition active:scale-95 active:bg-accent-soft/40 dark:text-foreground/90 sm:opacity-80 sm:hover:bg-accent-soft/30";
+
+function guardFocus(event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+}
 
 export default function EntryActionButtons({
   onEdit,
@@ -19,7 +26,11 @@ export default function EntryActionButtons({
       {onEdit && (
         <button
           type="button"
-          onClick={onEdit}
+          onMouseDown={guardFocus}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit();
+          }}
           aria-label="Edit"
           className={actionClass}
         >
@@ -29,7 +40,11 @@ export default function EntryActionButtons({
       {onCopy && (
         <button
           type="button"
-          onClick={onCopy}
+          onMouseDown={guardFocus}
+          onClick={(event) => {
+            event.stopPropagation();
+            onCopy();
+          }}
           aria-label="Copy"
           className={actionClass}
         >
@@ -39,7 +54,11 @@ export default function EntryActionButtons({
       {onDelete && (
         <button
           type="button"
-          onClick={onDelete}
+          onMouseDown={guardFocus}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
           aria-label="Delete"
           className={actionClass}
         >

@@ -4,7 +4,9 @@ export type ReminderPreferences = {
   timezone: string;
 };
 
-export const REMINDER_MINUTES = [0, 15, 30, 45] as const;
+export const REMINDER_MINUTES = [
+  0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55,
+] as const;
 
 export function getDefaultReminderHour() {
   const parsed = Number(process.env.PUSH_REMINDER_HOUR ?? "8");

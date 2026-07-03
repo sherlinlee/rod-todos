@@ -47,29 +47,6 @@ export default function AddTodoForm({
         </button>
       </div>
 
-      <div>
-        <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-foreground/45">
-          Sort into a box
-        </p>
-        <div className="grid grid-cols-2 gap-1.5">
-          {getCategories().map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => onCategoryChange(cat.id)}
-              className={`paper-box flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-center transition active:scale-[0.98] ${
-                category === cat.id ? cat.boxActive : cat.boxIdle
-              }`}
-            >
-              <span className="shrink-0 text-sm leading-none">{cat.emoji}</span>
-              <span className="text-[11px] font-bold leading-tight text-foreground">
-                {cat.boxLabel}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
       <label className="flex items-center gap-2 rounded-xl bg-lavender/25 px-3 py-2 text-xs font-semibold text-foreground/65 dark:bg-accent-soft/25 dark:text-foreground/75">
         <span className="shrink-0">📅 Due</span>
         <input
@@ -95,6 +72,29 @@ export default function AddTodoForm({
           />
         </div>
       )}
+
+      <div>
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-foreground/45">
+          Sort into a box
+        </p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {getCategories().map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => onCategoryChange(cat.id)}
+              className={`paper-box flex items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-center transition active:scale-[0.98] ${
+                category === cat.id ? cat.boxActive : cat.boxIdle
+              }`}
+            >
+              <span className="shrink-0 text-sm leading-none">{cat.emoji}</span>
+              <span className="text-[11px] font-bold leading-tight text-foreground">
+                {cat.boxLabel}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
     </form>
   );
 }
