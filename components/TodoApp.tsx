@@ -277,10 +277,15 @@ export default function TodoApp() {
     }
   }
 
-  function addTodo(e: React.FormEvent) {
+  function addTodo(
+    e: React.FormEvent,
+    extras?: { reminderTime: string | null },
+  ) {
     e.preventDefault();
     const text = input.trim();
     if (!text) return;
+
+    const nextReminderTime = extras?.reminderTime ?? reminderTime;
 
     const maxOrder = todos.reduce((max, t) => Math.max(max, t.order), -1);
 
@@ -292,7 +297,8 @@ export default function TodoApp() {
         completed: false,
         createdAt: Date.now(),
         dueDate: dueDate || null,
-        reminderTime: dueDate && reminderTime ? reminderTime : null,
+        reminderTime:
+          dueDate && nextReminderTime ? nextReminderTime : null,
         lastRemindedDate: null,
         category,
         order: maxOrder + 1,

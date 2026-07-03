@@ -1,7 +1,10 @@
 "use client";
 
+import { useRef } from "react";
 import { getCategories } from "@/lib/categories";
-import ReminderTimePicker from "@/components/ReminderTimePicker";
+import ReminderTimePicker, {
+  type ReminderTimePickerHandle,
+} from "@/components/ReminderTimePicker";
 import { todayString } from "@/lib/dates";
 import type { Category } from "@/lib/types";
 
@@ -14,7 +17,10 @@ type AddTodoFormProps = {
   onCategoryChange: (value: Category) => void;
   onDueDateChange: (value: string) => void;
   onReminderTimeChange: (value: string | null) => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (
+    e: React.FormEvent,
+    extras?: { reminderTime: string | null },
+  ) => void;
 };
 
 export default function AddTodoForm({
@@ -28,8 +34,18 @@ export default function AddTodoForm({
   onReminderTimeChange,
   onSubmit,
 }: AddTodoFormProps) {
+  const reminderPickerRef = useRef<ReminderTimePickerHandle>(null);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const flushedReminder = dueDate
+      ? reminderPickerRef.current?.flush() ?? reminderTime
+      : null;
+    onSubmit(e, { reminderTime: flushedReminder });
+  }
+
   return (
-    <form onSubmit={onSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-3">
       <div className="flex gap-2.5">
         <input
           type="text"
@@ -65,6 +81,7 @@ export default function AddTodoForm({
       {dueDate && (
         <div className="rounded-xl bg-background/60 px-3 py-2">
           <ReminderTimePicker
+            ref={reminderPickerRef}
             value={reminderTime}
             onChange={onReminderTimeChange}
             idPrefix="add-todo-reminder"

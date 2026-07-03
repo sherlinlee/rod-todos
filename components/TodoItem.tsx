@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import ReminderTimePicker from "@/components/ReminderTimePicker";
+import ReminderTimePicker, {
+  type ReminderTimePickerHandle,
+} from "@/components/ReminderTimePicker";
 import { getCategories, getCategoryMeta } from "@/lib/categories";
 import { formatDueDate } from "@/lib/dates";
 import { formatTaskReminderTimeLabel } from "@/lib/reminder-prefs";
@@ -43,6 +45,7 @@ export default function TodoItem({
   const [draftReminderTime, setDraftReminderTime] = useState(
     todo.reminderTime ?? null,
   );
+  const reminderPickerRef = useRef<ReminderTimePickerHandle>(null);
 
   const {
     attributes,
@@ -89,11 +92,15 @@ export default function TodoItem({
     const text = draftText.trim();
     if (!text) return;
 
+    const reminderTime = draftDueDate
+      ? reminderPickerRef.current?.flush() ?? draftReminderTime
+      : null;
+
     onUpdate(todo.id, {
       text,
       dueDate: draftDueDate || null,
       category: draftCategory,
-      reminderTime: draftDueDate ? draftReminderTime : null,
+      reminderTime,
     });
     setEditing(false);
   }
@@ -223,6 +230,7 @@ export default function TodoItem({
 
             {draftDueDate && (
               <ReminderTimePicker
+                ref={reminderPickerRef}
                 value={draftReminderTime}
                 onChange={setDraftReminderTime}
                 idPrefix={`edit-todo-${todo.id}`}

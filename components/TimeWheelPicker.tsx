@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  forwardRef,
   useCallback,
   useEffect,
   useId,
+  useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
@@ -35,6 +37,7 @@ type WheelColumnProps<T extends string | number> = {
   ariaLabel: string;
   loop?: boolean;
   disabled?: boolean;
+  registerCommit?: (commit: () => T) => () => void;
 };
 
 function WheelColumn<T extends string | number>({
@@ -45,6 +48,7 @@ function WheelColumn<T extends string | number>({
   ariaLabel,
   loop = true,
   disabled = false,
+  registerCommit,
 }: WheelColumnProps<T>) {
   const listId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -52,6 +56,11 @@ function WheelColumn<T extends string | number>({
   const lastEmitted = useRef(value);
   const internalValueChange = useRef(false);
   const isSettling = useRef(false);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const valueIndex = items.indexOf(value);
   const safeIndex = valueIndex >= 0 ? valueIndex : 0;
@@ -84,54 +93,71 @@ function WheelColumn<T extends string | number>({
     [centerRepeat, items, loop],
   );
 
-  const settleScroll = useCallback(() => {
+  const readValueFromScroll = useCallback((): T => {
     const el = scrollRef.current;
-    if (!el || items.length === 0 || isSettling.current) return;
-
-    isSettling.current = true;
+    if (!el || items.length === 0) {
+      return lastEmitted.current;
+    }
 
     const rawIndex = Math.round(el.scrollTop / WHEEL_ITEM_HEIGHT);
-    const clampedIndex = loop
-      ? rawIndex
+    const itemIndex = loop
+      ? ((rawIndex % items.length) + items.length) % items.length
       : Math.min(Math.max(rawIndex, 0), items.length - 1);
 
-    const itemIndex = loop
-      ? ((clampedIndex % items.length) + items.length) % items.length
-      : clampedIndex;
+    return items[itemIndex] ?? lastEmitted.current;
+  }, [items, loop]);
 
-    const nextValue = items[itemIndex];
-    if (nextValue === undefined) {
-      isSettling.current = false;
-      return;
-    }
+  const commitValue = useCallback(
+    (nextValue: T, emit: boolean) => {
+      const el = scrollRef.current;
+      const centeredIndex = loop ? indexForValue(nextValue) : items.indexOf(nextValue);
+      const targetTop = centeredIndex * WHEEL_ITEM_HEIGHT;
 
-    const centeredIndex = loop ? indexForValue(nextValue) : clampedIndex;
-    const targetTop = centeredIndex * WHEEL_ITEM_HEIGHT;
-
-    if (Math.abs(el.scrollTop - targetTop) > 1) {
-      el.scrollTop = targetTop;
-    }
-
-    if (loop) {
-      const repeatIndex = Math.floor(clampedIndex / items.length);
-      if (repeatIndex < 4 || repeatIndex > WHEEL_LOOP_REPEATS - 5) {
-        el.scrollTop = indexForValue(nextValue) * WHEEL_ITEM_HEIGHT;
+      if (el && Math.abs(el.scrollTop - targetTop) > 1) {
+        el.scrollTop = targetTop;
       }
-    }
 
-    setFocusedIndex(itemIndex);
+      const itemIndex = items.indexOf(nextValue);
+      if (itemIndex >= 0) {
+        setFocusedIndex(itemIndex);
+      }
 
-    if (nextValue !== lastEmitted.current) {
+      const changed = nextValue !== lastEmitted.current;
       lastEmitted.current = nextValue;
-      internalValueChange.current = true;
-      onChange(nextValue);
-      hapticSelection();
-    }
+
+      if (emit) {
+        internalValueChange.current = true;
+        onChangeRef.current(nextValue);
+        if (changed) {
+          hapticSelection();
+        }
+      }
+
+      return nextValue;
+    },
+    [indexForValue, items, loop],
+  );
+
+  const settleScroll = useCallback(() => {
+    if (items.length === 0 || isSettling.current) return;
+
+    isSettling.current = true;
+    const nextValue = readValueFromScroll();
+    commitValue(nextValue, true);
 
     requestAnimationFrame(() => {
       isSettling.current = false;
     });
-  }, [indexForValue, items, loop, onChange]);
+  }, [commitValue, items.length, readValueFromScroll]);
+
+  const commit = useCallback(() => {
+    if (scrollEndTimer.current) {
+      clearTimeout(scrollEndTimer.current);
+      scrollEndTimer.current = null;
+    }
+    const nextValue = readValueFromScroll();
+    return commitValue(nextValue, true);
+  }, [commitValue, readValueFromScroll]);
 
   useLayoutEffect(() => {
     lastEmitted.current = value;
@@ -145,6 +171,11 @@ function WheelColumn<T extends string | number>({
 
     scrollToIndex(indexForValue(value), false);
   }, [indexForValue, items, scrollToIndex, value]);
+
+  useEffect(() => {
+    if (!registerCommit) return;
+    return registerCommit(commit);
+  }, [commit, registerCommit]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -174,14 +205,7 @@ function WheelColumn<T extends string | number>({
       const itemIndex = loop
         ? ((rawIndex % items.length) + items.length) % items.length
         : Math.min(Math.max(rawIndex, 0), items.length - 1);
-      const nextValue = items[itemIndex];
       setFocusedIndex(itemIndex);
-
-      if (nextValue !== undefined && nextValue !== lastEmitted.current) {
-        lastEmitted.current = nextValue;
-        internalValueChange.current = true;
-        onChange(nextValue);
-      }
     }
 
     if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
@@ -200,10 +224,7 @@ function WheelColumn<T extends string | number>({
       : Math.min(Math.max(base + delta, 0), items.length - 1);
     const nextValue = items[nextIndex];
     if (nextValue === undefined) return;
-    lastEmitted.current = nextValue;
-    internalValueChange.current = true;
-    hapticSelection();
-    onChange(nextValue);
+    commitValue(nextValue, true);
     scrollToIndex(indexForValue(nextValue), true);
   }
 
@@ -265,6 +286,10 @@ function WheelColumn<T extends string | number>({
   );
 }
 
+export type TimeWheelPickerHandle = {
+  flush: () => TimeWheelValue;
+};
+
 export type TimeWheelPickerProps = {
   value?: string | null;
   onChange?: (value: TimeWheelValue) => void;
@@ -273,105 +298,165 @@ export type TimeWheelPickerProps = {
   "aria-label"?: string;
 };
 
-export default function TimeWheelPicker({
-  value,
-  onChange,
-  disabled = false,
-  className = "",
-  "aria-label": ariaLabel = "Select time",
-}: TimeWheelPickerProps) {
-  const propSelection = timeWheelFrom24(value ?? null);
-  const [selection, setSelection] = useState(propSelection);
-  const selectionRef = useRef(propSelection);
+const TimeWheelPicker = forwardRef<TimeWheelPickerHandle, TimeWheelPickerProps>(
+  function TimeWheelPicker(
+    {
+      value,
+      onChange,
+      disabled = false,
+      className = "",
+      "aria-label": ariaLabel = "Select time",
+    },
+    ref,
+  ) {
+    const propSelection = timeWheelFrom24(value ?? null);
+    const [selection, setSelection] = useState(propSelection);
+    const selectionRef = useRef(propSelection);
+    const lastOwnEmit = useRef<string | null>(null);
+    const onChangeRef = useRef(onChange);
 
-  useEffect(() => {
-    const next = timeWheelFrom24(value ?? null);
-    selectionRef.current = next;
-    setSelection(next);
-  }, [value]);
+    const commitHour = useRef<() => WheelHour>(() => selectionRef.current.hour12);
+    const commitMinute = useRef<() => WheelMinute>(() => selectionRef.current.minute);
+    const commitPeriod = useRef<() => WheelPeriod>(() => selectionRef.current.period);
 
-  const emit = useCallback(
-    (hour12: WheelHour, minute: WheelMinute, period: WheelPeriod) => {
-      const next = buildTimeWheelValue(hour12, minute, period);
+    useEffect(() => {
+      onChangeRef.current = onChange;
+    }, [onChange]);
+
+    useEffect(() => {
+      const incoming = value ?? null;
+      if (incoming === lastOwnEmit.current) return;
+
+      const next = timeWheelFrom24(incoming);
       selectionRef.current = next;
       setSelection(next);
-      onChange?.(next);
-    },
-    [onChange],
-  );
+    }, [value]);
 
-  const patchSelection = useCallback(
-    (patch: Partial<Pick<TimeWheelValue, "hour12" | "minute" | "period">>) => {
-      const current = selectionRef.current;
-      emit(
-        patch.hour12 ?? current.hour12,
-        patch.minute ?? current.minute,
-        patch.period ?? current.period,
-      );
-    },
-    [emit],
-  );
+    const emitSelection = useCallback(
+      (hour12: WheelHour, minute: WheelMinute, period: WheelPeriod) => {
+        const next = buildTimeWheelValue(hour12, minute, period);
+        selectionRef.current = next;
+        setSelection(next);
+        lastOwnEmit.current = next.time24;
+        onChangeRef.current?.(next);
+        return next;
+      },
+      [],
+    );
 
-  return (
-    <div
-      role="group"
-      aria-label={ariaLabel}
-      aria-disabled={disabled || undefined}
-      className={`time-wheel-picker relative overflow-hidden rounded-xl border border-accent-soft/25 bg-card/90 ${className}`}
-    >
+    const patchSelection = useCallback(
+      (patch: Partial<Pick<TimeWheelValue, "hour12" | "minute" | "period">>) => {
+        const current = selectionRef.current;
+        return emitSelection(
+          patch.hour12 ?? current.hour12,
+          patch.minute ?? current.minute,
+          patch.period ?? current.period,
+        );
+      },
+      [emitSelection],
+    );
+
+    const flush = useCallback(() => {
+      const hour12 = commitHour.current();
+      const minute = commitMinute.current();
+      const period = commitPeriod.current();
+      return emitSelection(hour12, minute, period);
+    }, [emitSelection]);
+
+    useImperativeHandle(ref, () => ({ flush }), [flush]);
+
+    const registerHourCommit = useCallback((commit: () => WheelHour) => {
+      commitHour.current = commit;
+      return () => {
+        commitHour.current = () => selectionRef.current.hour12;
+      };
+    }, []);
+
+    const registerMinuteCommit = useCallback((commit: () => WheelMinute) => {
+      commitMinute.current = commit;
+      return () => {
+        commitMinute.current = () => selectionRef.current.minute;
+      };
+    }, []);
+
+    const registerPeriodCommit = useCallback((commit: () => WheelPeriod) => {
+      commitPeriod.current = commit;
+      return () => {
+        commitPeriod.current = () => selectionRef.current.period;
+      };
+    }, []);
+
+    return (
       <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-4 top-1/2 z-10 h-8 -translate-y-1/2 rounded-lg border border-accent-soft/20 bg-accent-soft/10"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-20 bg-[linear-gradient(to_bottom,var(--card)_0%,transparent_30%,transparent_70%,var(--card)_100%)] opacity-95"
-      />
-
-      <div className="relative z-0 flex items-stretch px-0.5 py-0.5">
-        <WheelColumn
-          items={WHEEL_HOURS}
-          value={selection.hour12}
-          onChange={(hour12) => patchSelection({ hour12 })}
-          formatItem={(hour) => String(hour)}
-          ariaLabel="Hour"
-          loop
-          disabled={disabled}
-        />
-
+        role="group"
+        aria-label={ariaLabel}
+        aria-disabled={disabled || undefined}
+        className={`time-wheel-picker relative overflow-hidden rounded-xl border border-accent-soft/25 bg-card/90 ${className}`}
+      >
         <div
           aria-hidden
-          className="flex w-2 shrink-0 items-center justify-center text-[17px] font-semibold text-foreground/70"
-        >
-          :
+          className="pointer-events-none absolute inset-x-4 top-1/2 z-10 h-8 -translate-y-1/2 rounded-lg border border-accent-soft/20 bg-accent-soft/10"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-20 bg-[linear-gradient(to_bottom,var(--card)_0%,transparent_30%,transparent_70%,var(--card)_100%)] opacity-95"
+        />
+
+        <div className="relative z-0 flex items-stretch px-0.5 py-0.5">
+          <WheelColumn
+            items={WHEEL_HOURS}
+            value={selection.hour12}
+            onChange={(hour12) => {
+              patchSelection({ hour12 });
+            }}
+            formatItem={(hour) => String(hour)}
+            ariaLabel="Hour"
+            loop
+            disabled={disabled}
+            registerCommit={registerHourCommit}
+          />
+
+          <div
+            aria-hidden
+            className="flex w-2 shrink-0 items-center justify-center text-[17px] font-semibold text-foreground/70"
+          >
+            :
+          </div>
+
+          <WheelColumn
+            items={WHEEL_MINUTES}
+            value={selection.minute}
+            onChange={(minute) => {
+              patchSelection({ minute });
+            }}
+            formatItem={(minute) => String(minute).padStart(2, "0")}
+            ariaLabel="Minute"
+            loop
+            disabled={disabled}
+            registerCommit={registerMinuteCommit}
+          />
+
+          <WheelColumn
+            items={WHEEL_PERIODS}
+            value={selection.period}
+            onChange={(period) => {
+              patchSelection({ period });
+            }}
+            formatItem={(period) => period}
+            ariaLabel="AM or PM"
+            loop={false}
+            disabled={disabled}
+            registerCommit={registerPeriodCommit}
+          />
         </div>
 
-        <WheelColumn
-          items={WHEEL_MINUTES}
-          value={selection.minute}
-          onChange={(minute) => patchSelection({ minute })}
-          formatItem={(minute) => String(minute).padStart(2, "0")}
-          ariaLabel="Minute"
-          loop
-          disabled={disabled}
-        />
-
-        <WheelColumn
-          items={WHEEL_PERIODS}
-          value={selection.period}
-          onChange={(period) => patchSelection({ period })}
-          formatItem={(period) => period}
-          ariaLabel="AM or PM"
-          loop={false}
-          disabled={disabled}
-        />
+        <p className="px-3 pb-2 text-center text-xs font-semibold text-accent">
+          {selection.label12}
+        </p>
       </div>
+    );
+  },
+);
 
-      <p className="sr-only" aria-live="polite">
-        Selected time {selection.label12}, 24 hour {selection.time24}
-      </p>
-    </div>
-  );
-}
-
+export default TimeWheelPicker;
 export type { TimeWheelValue };

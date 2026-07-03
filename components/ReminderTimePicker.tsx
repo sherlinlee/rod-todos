@@ -1,6 +1,13 @@
 "use client";
 
-import TimeWheelPicker from "@/components/TimeWheelPicker";
+import {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+} from "react";
+import TimeWheelPicker, {
+  type TimeWheelPickerHandle,
+} from "@/components/TimeWheelPicker";
 import {
   defaultTimeWheelValue,
   parseTime24,
@@ -15,13 +22,25 @@ type ReminderTimePickerProps = {
   compact?: boolean;
 };
 
-export default function ReminderTimePicker({
-  value,
-  onChange,
-  disabled = false,
-  idPrefix = "reminder",
-  compact = false,
-}: ReminderTimePickerProps) {
+export type ReminderTimePickerHandle = {
+  /** Read the wheel's current position and sync parent state. */
+  flush: () => string | null;
+};
+
+const ReminderTimePicker = forwardRef<
+  ReminderTimePickerHandle,
+  ReminderTimePickerProps
+>(function ReminderTimePicker(
+  {
+    value,
+    onChange,
+    disabled = false,
+    idPrefix = "reminder",
+    compact = false,
+  },
+  ref,
+) {
+  const wheelRef = useRef<TimeWheelPickerHandle>(null);
   const parsed = parseTime24(value);
   const enabled = parsed !== null;
 
@@ -33,6 +52,21 @@ export default function ReminderTimePicker({
     const defaults = defaultTimeWheelValue();
     onChange(defaults.time24);
   }
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      flush() {
+        if (!enabled) return null;
+        const next = wheelRef.current?.flush();
+        if (!next) return value;
+        const time24 = formatTaskReminderTime(next.hour24, next.minute);
+        onChange(time24);
+        return time24;
+      },
+    }),
+    [enabled, onChange, value],
+  );
 
   return (
     <div className={compact ? "space-y-2" : "space-y-3"}>
@@ -53,12 +87,17 @@ export default function ReminderTimePicker({
 
       {enabled && (
         <TimeWheelPicker
+          ref={wheelRef}
           value={value}
           disabled={disabled}
           aria-label="Reminder time"
-          onChange={(next) => onChange(formatTaskReminderTime(next.hour24, next.minute))}
+          onChange={(next) =>
+            onChange(formatTaskReminderTime(next.hour24, next.minute))
+          }
         />
       )}
     </div>
   );
-}
+});
+
+export default ReminderTimePicker;
