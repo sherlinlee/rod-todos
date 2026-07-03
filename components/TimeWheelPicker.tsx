@@ -122,6 +122,9 @@ function WheelColumn<T extends string | number>({
     setFocusedIndex(itemIndex);
 
     if (nextValue !== lastEmitted.current) {
+      lastEmitted.current = nextValue;
+      internalValueChange.current = true;
+      onChange(nextValue);
       hapticSelection();
     }
 
@@ -277,12 +280,37 @@ export default function TimeWheelPicker({
   className = "",
   "aria-label": ariaLabel = "Select time",
 }: TimeWheelPickerProps) {
-  const selection = timeWheelFrom24(value ?? null);
+  const propSelection = timeWheelFrom24(value ?? null);
+  const [selection, setSelection] = useState(propSelection);
+  const selectionRef = useRef(propSelection);
 
-  function emit(hour12: WheelHour, minute: WheelMinute, period: WheelPeriod) {
-    const next = buildTimeWheelValue(hour12, minute, period);
-    onChange?.(next);
-  }
+  useEffect(() => {
+    const next = timeWheelFrom24(value ?? null);
+    selectionRef.current = next;
+    setSelection(next);
+  }, [value]);
+
+  const emit = useCallback(
+    (hour12: WheelHour, minute: WheelMinute, period: WheelPeriod) => {
+      const next = buildTimeWheelValue(hour12, minute, period);
+      selectionRef.current = next;
+      setSelection(next);
+      onChange?.(next);
+    },
+    [onChange],
+  );
+
+  const patchSelection = useCallback(
+    (patch: Partial<Pick<TimeWheelValue, "hour12" | "minute" | "period">>) => {
+      const current = selectionRef.current;
+      emit(
+        patch.hour12 ?? current.hour12,
+        patch.minute ?? current.minute,
+        patch.period ?? current.period,
+      );
+    },
+    [emit],
+  );
 
   return (
     <div
@@ -304,7 +332,7 @@ export default function TimeWheelPicker({
         <WheelColumn
           items={WHEEL_HOURS}
           value={selection.hour12}
-          onChange={(hour12) => emit(hour12, selection.minute, selection.period)}
+          onChange={(hour12) => patchSelection({ hour12 })}
           formatItem={(hour) => String(hour)}
           ariaLabel="Hour"
           loop
@@ -321,7 +349,7 @@ export default function TimeWheelPicker({
         <WheelColumn
           items={WHEEL_MINUTES}
           value={selection.minute}
-          onChange={(minute) => emit(selection.hour12, minute, selection.period)}
+          onChange={(minute) => patchSelection({ minute })}
           formatItem={(minute) => String(minute).padStart(2, "0")}
           ariaLabel="Minute"
           loop
@@ -331,7 +359,7 @@ export default function TimeWheelPicker({
         <WheelColumn
           items={WHEEL_PERIODS}
           value={selection.period}
-          onChange={(period) => emit(selection.hour12, selection.minute, period)}
+          onChange={(period) => patchSelection({ period })}
           formatItem={(period) => period}
           ariaLabel="AM or PM"
           loop={false}

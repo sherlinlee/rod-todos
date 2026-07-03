@@ -40,6 +40,7 @@ import {
   readLocalJournal,
   readLocalTombstones,
   refreshFromCloud,
+  pushSyncNow,
   scheduleCloudPush,
   touchSyncMeta,
   writeLocalIdeas,
@@ -93,19 +94,25 @@ export default function TodoApp() {
     expectedCompleted: boolean;
     at: number;
   } | null>(null);
+  const lastEditRef = useRef<{ at: number } | null>(null);
   const todosRef = useRef<Todo[]>([]);
 
-  function persistTodos(next: Todo[]) {
+  function persistTodos(next: Todo[], syncNow = false) {
     todosRef.current = next;
     writeLocalTodos(next);
     touchSyncMeta();
-    scheduleCloudPush(() => ({
+    const payload = {
       todos: next,
       ideas: readLocalIdeas(),
       journal: readLocalJournal(),
       tombstones: readLocalTombstones(),
       updatedAt: Date.now(),
-    }));
+    };
+    if (syncNow) {
+      pushSyncNow(payload);
+    } else {
+      scheduleCloudPush(() => payload);
+    }
   }
 
   useEffect(() => {
@@ -157,6 +164,11 @@ export default function TodoApp() {
         return;
       }
 
+      const lastEdit = lastEditRef.current;
+      if (lastEdit != null && Date.now() - lastEdit.at < 5000) {
+        return;
+      }
+
       const localSnapshot = buildLocalSnapshot();
       const merged = mergeSyncData(
         {
@@ -171,6 +183,7 @@ export default function TodoApp() {
       );
 
       todosRef.current = merged.todos;
+      writeLocalTodos(merged.todos);
       setTodos(merged.todos);
     },
     [],
@@ -365,6 +378,7 @@ export default function TodoApp() {
     const reminderChanged = updates.reminderTime !== (target.reminderTime ?? null);
     const dueDateChanged = updates.dueDate !== target.dueDate;
     const now = Date.now();
+    lastEditRef.current = { at: now };
 
     const next = todosRef.current.map((t) =>
       t.id === id
@@ -380,7 +394,7 @@ export default function TodoApp() {
     );
 
     setTodos(next);
-    persistTodos(next);
+    persistTodos(next, true);
   }
 
   function clearCompleted() {
