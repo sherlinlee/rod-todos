@@ -22,8 +22,8 @@ import {
   type WheelPeriod,
 } from "@/lib/time-wheel";
 
-export const WHEEL_ITEM_HEIGHT = 44;
-const WHEEL_VISIBLE_ROWS = 5;
+export const WHEEL_ITEM_HEIGHT = 32;
+const WHEEL_VISIBLE_ROWS = 3;
 const WHEEL_LOOP_REPEATS = 41;
 
 type WheelColumnProps<T extends string | number> = {
@@ -188,7 +188,7 @@ function WheelColumn<T extends string | number>({
         tabIndex={disabled ? -1 : 0}
         onScroll={handleScroll}
         onKeyDown={handleKeyDown}
-        className="wheel-column-scroll h-[220px] overflow-y-auto overscroll-none [-webkit-overflow-scrolling:touch]"
+        className="wheel-column-scroll h-24 overflow-y-auto overscroll-none [-webkit-overflow-scrolling:touch]"
       >
         {!loop && (
           <div aria-hidden style={{ height: padRows * WHEEL_ITEM_HEIGHT }} />
@@ -201,7 +201,7 @@ function WheelColumn<T extends string | number>({
               key={`${String(item)}-${index}`}
               role="option"
               aria-selected={selected}
-              className={`wheel-column-item flex h-11 items-center justify-center px-1 text-[22px] leading-none transition-[color,opacity,font-weight] duration-150 ${
+              className={`wheel-column-item flex h-8 items-center justify-center px-0.5 text-[17px] leading-none transition-[color,opacity,font-weight] duration-150 ${
                 selected
                   ? "font-semibold text-foreground opacity-100"
                   : "font-normal text-foreground/35"
@@ -246,18 +246,18 @@ export default function TimeWheelPicker({
       role="group"
       aria-label={ariaLabel}
       aria-disabled={disabled || undefined}
-      className={`time-wheel-picker relative overflow-hidden rounded-2xl border border-accent-soft/25 bg-card/90 ${className}`}
+      className={`time-wheel-picker relative overflow-hidden rounded-xl border border-accent-soft/25 bg-card/90 ${className}`}
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-3 top-1/2 z-10 h-11 -translate-y-1/2 rounded-xl border border-accent-soft/20 bg-accent-soft/10"
+        className="pointer-events-none absolute inset-x-4 top-1/2 z-10 h-8 -translate-y-1/2 rounded-lg border border-accent-soft/20 bg-accent-soft/10"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-20 bg-[linear-gradient(to_bottom,var(--card)_0%,transparent_26%,transparent_74%,var(--card)_100%)] opacity-95"
+        className="pointer-events-none absolute inset-0 z-20 bg-[linear-gradient(to_bottom,var(--card)_0%,transparent_30%,transparent_70%,var(--card)_100%)] opacity-95"
       />
 
-      <div className="relative z-0 flex items-stretch px-1 py-1">
+      <div className="relative z-0 flex items-stretch px-0.5 py-0.5">
         <WheelColumn
           items={WHEEL_HOURS}
           value={selection.hour12}
@@ -270,7 +270,7 @@ export default function TimeWheelPicker({
 
         <div
           aria-hidden
-          className="flex w-3 shrink-0 items-center justify-center pb-0.5 text-[22px] font-semibold text-foreground/70"
+          className="flex w-2 shrink-0 items-center justify-center text-[17px] font-semibold text-foreground/70"
         >
           :
         </div>
