@@ -23,8 +23,9 @@ import {
 } from "@/lib/time-wheel";
 
 export const WHEEL_ITEM_HEIGHT = 32;
-const WHEEL_VISIBLE_ROWS = 3;
+const WHEEL_VISIBLE_ROWS = 5;
 const WHEEL_LOOP_REPEATS = 41;
+const SETTLE_DEBOUNCE_MS = 140;
 
 type WheelColumnProps<T extends string | number> = {
   items: readonly T[];
@@ -49,6 +50,8 @@ function WheelColumn<T extends string | number>({
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollEndTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastEmitted = useRef(value);
+  const internalValueChange = useRef(false);
+  const isSettling = useRef(false);
 
   const valueIndex = items.indexOf(value);
   const safeIndex = valueIndex >= 0 ? valueIndex : 0;
@@ -67,9 +70,9 @@ function WheelColumn<T extends string | number>({
     const top = index * WHEEL_ITEM_HEIGHT;
     if (smooth) {
       el.scrollTo({ top, behavior: "smooth" });
-    } else {
-      el.scrollTop = top;
+      return;
     }
+    el.scrollTop = top;
   }, []);
 
   const indexForValue = useCallback(
@@ -83,7 +86,9 @@ function WheelColumn<T extends string | number>({
 
   const settleScroll = useCallback(() => {
     const el = scrollRef.current;
-    if (!el || items.length === 0) return;
+    if (!el || items.length === 0 || isSettling.current) return;
+
+    isSettling.current = true;
 
     const rawIndex = Math.round(el.scrollTop / WHEEL_ITEM_HEIGHT);
     const clampedIndex = loop
@@ -95,44 +100,73 @@ function WheelColumn<T extends string | number>({
       : clampedIndex;
 
     const nextValue = items[itemIndex];
-    if (nextValue === undefined) return;
+    if (nextValue === undefined) {
+      isSettling.current = false;
+      return;
+    }
+
+    const centeredIndex = loop ? indexForValue(nextValue) : clampedIndex;
+    const targetTop = centeredIndex * WHEEL_ITEM_HEIGHT;
+
+    if (Math.abs(el.scrollTop - targetTop) > 1) {
+      el.scrollTop = targetTop;
+    }
 
     if (loop) {
-      const centeredIndex = indexForValue(nextValue);
-      if (Math.abs(el.scrollTop - centeredIndex * WHEEL_ITEM_HEIGHT) > 1) {
-        scrollToIndex(centeredIndex, true);
-      }
-
       const repeatIndex = Math.floor(clampedIndex / items.length);
       if (repeatIndex < 4 || repeatIndex > WHEEL_LOOP_REPEATS - 5) {
-        scrollToIndex(indexForValue(nextValue), false);
+        el.scrollTop = indexForValue(nextValue) * WHEEL_ITEM_HEIGHT;
       }
-    } else if (Math.abs(el.scrollTop - clampedIndex * WHEEL_ITEM_HEIGHT) > 1) {
-      scrollToIndex(clampedIndex, true);
     }
+
+    setFocusedIndex(itemIndex);
 
     if (nextValue !== lastEmitted.current) {
       lastEmitted.current = nextValue;
+      internalValueChange.current = true;
       hapticSelection();
       onChange(nextValue);
     }
-  }, [indexForValue, items, loop, onChange, scrollToIndex]);
+
+    requestAnimationFrame(() => {
+      isSettling.current = false;
+    });
+  }, [indexForValue, items, loop, onChange]);
 
   useLayoutEffect(() => {
     lastEmitted.current = value;
     const idx = items.indexOf(value);
     if (idx >= 0) setFocusedIndex(idx);
+
+    if (internalValueChange.current) {
+      internalValueChange.current = false;
+      return;
+    }
+
     scrollToIndex(indexForValue(value), false);
   }, [indexForValue, items, scrollToIndex, value]);
 
   useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    function onScrollEnd() {
+      if (scrollEndTimer.current) {
+        clearTimeout(scrollEndTimer.current);
+        scrollEndTimer.current = null;
+      }
+      settleScroll();
+    }
+
+    el.addEventListener("scrollend", onScrollEnd);
     return () => {
+      el.removeEventListener("scrollend", onScrollEnd);
       if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
     };
-  }, []);
+  }, [settleScroll]);
 
   function handleScroll() {
-    if (disabled) return;
+    if (disabled || isSettling.current) return;
 
     const el = scrollRef.current;
     if (el && items.length > 0) {
@@ -145,8 +179,9 @@ function WheelColumn<T extends string | number>({
 
     if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
     scrollEndTimer.current = setTimeout(() => {
+      scrollEndTimer.current = null;
       settleScroll();
-    }, 80);
+    }, SETTLE_DEBOUNCE_MS);
   }
 
   function moveBy(delta: number) {
@@ -159,6 +194,7 @@ function WheelColumn<T extends string | number>({
     const nextValue = items[nextIndex];
     if (nextValue === undefined) return;
     lastEmitted.current = nextValue;
+    internalValueChange.current = true;
     hapticSelection();
     onChange(nextValue);
     scrollToIndex(indexForValue(nextValue), true);
@@ -176,6 +212,7 @@ function WheelColumn<T extends string | number>({
   }
 
   const padRows = Math.floor(WHEEL_VISIBLE_ROWS / 2);
+  const scrollHeight = WHEEL_ITEM_HEIGHT * WHEEL_VISIBLE_ROWS;
 
   return (
     <div className="wheel-column relative min-w-0 flex-1">
@@ -188,7 +225,8 @@ function WheelColumn<T extends string | number>({
         tabIndex={disabled ? -1 : 0}
         onScroll={handleScroll}
         onKeyDown={handleKeyDown}
-        className="wheel-column-scroll h-24 overflow-y-auto overscroll-none [-webkit-overflow-scrolling:touch]"
+        className="wheel-column-scroll overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+        style={{ height: scrollHeight }}
       >
         {!loop && (
           <div aria-hidden style={{ height: padRows * WHEEL_ITEM_HEIGHT }} />
@@ -201,11 +239,12 @@ function WheelColumn<T extends string | number>({
               key={`${String(item)}-${index}`}
               role="option"
               aria-selected={selected}
-              className={`wheel-column-item flex h-8 items-center justify-center px-0.5 text-[17px] leading-none transition-[color,opacity,font-weight] duration-150 ${
+              className={`wheel-column-item flex items-center justify-center px-0.5 text-[17px] leading-none ${
                 selected
                   ? "font-semibold text-foreground opacity-100"
                   : "font-normal text-foreground/35"
               }`}
+              style={{ height: WHEEL_ITEM_HEIGHT }}
             >
               {formatItem(item)}
             </div>

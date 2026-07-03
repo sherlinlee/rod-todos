@@ -686,9 +686,11 @@ body.is-dragging .animate-pop-in {
 }
 
 .wheel-column-scroll {
-  scroll-snap-type: y mandatory;
+  scroll-snap-type: y proximity;
+  scroll-behavior: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  touch-action: pan-y;
 }
 
 .wheel-column-scroll::-webkit-scrollbar {
@@ -697,7 +699,6 @@ body.is-dragging .animate-pop-in {
 
 .wheel-column-item {
   scroll-snap-align: center;
-  scroll-snap-stop: always;
 }
 
 /* Belle weather widget */
