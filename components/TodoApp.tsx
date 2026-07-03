@@ -89,8 +89,11 @@ export default function TodoApp() {
     emoji: string;
   } | null>(null);
   const [allDoneCompliment, setAllDoneCompliment] = useState<string | null>(null);
-  const [addedPrompt, setAddedPrompt] = useState(false);
-  const [addedPromptKey, setAddedPromptKey] = useState(0);
+  const [formPrompt, setFormPrompt] = useState<{
+    message: string;
+    key: number;
+  } | null>(null);
+  const formPromptKey = useRef(0);
   const lastToggleRef = useRef<{
     id: string;
     expectedCompleted: boolean;
@@ -269,7 +272,13 @@ export default function TodoApp() {
 
   const dismissCelebration = useCallback(() => setCelebration(null), []);
   const dismissCompletionFlash = useCallback(() => setCompletionFlash(null), []);
-  const dismissAddedPrompt = useCallback(() => setAddedPrompt(false), []);
+  const dismissFormPrompt = useCallback(() => setFormPrompt(null), []);
+
+  function showFormPrompt(message: string) {
+    formPromptKey.current += 1;
+    hapticSelection();
+    setFormPrompt({ message, key: formPromptKey.current });
+  }
 
   function celebrate(wasAllDoneForToday: boolean) {
     const picked = wasAllDoneForToday ? allDoneEncouragement() : pickEncouragement();
@@ -314,9 +323,7 @@ export default function TodoApp() {
     setInput("");
     setDueDate("");
     setReminderTime(null);
-    hapticSelection();
-    setAddedPromptKey((key) => key + 1);
-    setAddedPrompt(true);
+    showFormPrompt("added!");
   }
 
   function toggleTodo(id: string) {
@@ -411,6 +418,7 @@ export default function TodoApp() {
 
     setTodos(next);
     persistTodos(next, true);
+    showFormPrompt("saved!");
   }
 
   function clearCompleted() {
@@ -506,9 +514,8 @@ export default function TodoApp() {
             onCategoryChange={setCategory}
             onDueDateChange={setDueDate}
             onReminderTimeChange={setReminderTime}
-            showAddedPrompt={addedPrompt}
-            addedPromptKey={addedPromptKey}
-            onAddedPromptDone={dismissAddedPrompt}
+            formPrompt={formPrompt}
+            onFormPromptDone={dismissFormPrompt}
             onSubmit={addTodo}
           />
 

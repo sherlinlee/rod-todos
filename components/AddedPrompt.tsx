@@ -6,10 +6,14 @@ import { getSiteConfig } from "@/lib/site";
 const PROMPT_MS = 1_200;
 
 type AddedPromptProps = {
+  message?: string;
   onDone: () => void;
 };
 
-export default function AddedPrompt({ onDone }: AddedPromptProps) {
+export default function AddedPrompt({
+  message = "added!",
+  onDone,
+}: AddedPromptProps) {
   const site = getSiteConfig();
 
   useEffect(() => {
@@ -26,7 +30,7 @@ export default function AddedPrompt({ onDone }: AddedPromptProps) {
       <span className="animate-check-pop text-lg leading-none" aria-hidden>
         {site.navTodoEmoji}
       </span>
-      <p className="text-sm font-bold text-accent">added!</p>
+      <p className="text-sm font-bold text-accent">{message}</p>
     </div>
   );
 }

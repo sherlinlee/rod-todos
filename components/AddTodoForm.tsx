@@ -14,9 +14,8 @@ type AddTodoFormProps = {
   category: Category;
   dueDate: string;
   reminderTime: string | null;
-  showAddedPrompt?: boolean;
-  addedPromptKey?: number;
-  onAddedPromptDone?: () => void;
+  formPrompt?: { message: string; key: number } | null;
+  onFormPromptDone?: () => void;
   onInputChange: (value: string) => void;
   onCategoryChange: (value: Category) => void;
   onDueDateChange: (value: string) => void;
@@ -32,9 +31,8 @@ export default function AddTodoForm({
   category,
   dueDate,
   reminderTime,
-  showAddedPrompt = false,
-  addedPromptKey = 0,
-  onAddedPromptDone,
+  formPrompt = null,
+  onFormPromptDone,
   onInputChange,
   onCategoryChange,
   onDueDateChange,
@@ -53,6 +51,16 @@ export default function AddTodoForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
+      {formPrompt && onFormPromptDone && (
+        <div className="pointer-events-none -mb-0.5 flex justify-center pb-1">
+          <AddedPrompt
+            key={formPrompt.key}
+            message={formPrompt.message}
+            onDone={onFormPromptDone}
+          />
+        </div>
+      )}
+
       <div className="flex gap-2.5">
         <input
           type="text"
@@ -69,12 +77,6 @@ export default function AddTodoForm({
           Add
         </button>
       </div>
-
-      {showAddedPrompt && onAddedPromptDone && (
-        <div className="pointer-events-none flex justify-center">
-          <AddedPrompt key={addedPromptKey} onDone={onAddedPromptDone} />
-        </div>
-      )}
 
       <label className="flex items-center gap-2 rounded-xl bg-lavender/25 px-3 py-2 text-xs font-semibold text-foreground/65 dark:bg-accent-soft/25 dark:text-foreground/75">
         <span className="shrink-0">📅 Due</span>
