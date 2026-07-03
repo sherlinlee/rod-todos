@@ -303,15 +303,20 @@ export default function TodoApp() {
 
     const nextReminderTime = extras?.reminderTime ?? reminderTime;
 
-    const maxOrder = todos.reduce((max, t) => Math.max(max, t.order), -1);
-
-    setTodos((prev) => [
-      ...prev,
+    const currentTodos = todosRef.current;
+    const now = Date.now();
+    const maxOrder = currentTodos.reduce(
+      (max, t) => Math.max(max, t.order),
+      -1,
+    );
+    const next = [
+      ...currentTodos,
       {
         id: createId(),
         text,
         completed: false,
-        createdAt: Date.now(),
+        createdAt: now,
+        updatedAt: now,
         dueDate: dueDate || null,
         reminderTime:
           dueDate && nextReminderTime ? nextReminderTime : null,
@@ -319,7 +324,10 @@ export default function TodoApp() {
         category,
         order: maxOrder + 1,
       },
-    ]);
+    ];
+
+    setTodos(next);
+    persistTodos(next, true);
     setInput("");
     setDueDate("");
     setReminderTime(null);
@@ -456,7 +464,10 @@ export default function TodoApp() {
   }
 
   function handleReorder(activeId: string, overId: string) {
-    setTodos((prev) => reorderTodos(prev, activeId, overId));
+    const next = reorderTodos(todosRef.current, activeId, overId);
+    if (next === todosRef.current) return;
+    setTodos(next);
+    persistTodos(next, true);
   }
 
   const filterButtons: { key: StatusFilter; label: string; count?: number }[] =

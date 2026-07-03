@@ -39,6 +39,9 @@ export function useCloudRefresh(
         pending = false;
       } finally {
         inFlight = false;
+        if (pending && !disposed && document.visibilityState === "visible") {
+          void runRefresh();
+        }
       }
     }
 
