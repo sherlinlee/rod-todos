@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import AddTodoForm from "@/components/AddTodoForm";
+import AddedPrompt from "@/components/AddedPrompt";
 import CelebrationToast from "@/components/CelebrationToast";
 import CompletionFlash from "@/components/CompletionFlash";
 import ConfettiBurst from "@/components/ConfettiBurst";
@@ -16,7 +17,7 @@ import PushNotificationToggle from "@/components/PushNotificationToggle";
 import { getCategories } from "@/lib/categories";
 import { allDoneEncouragement, ALL_DONE_WITH_TODAYS_LIST, pickAllDoneCompliment, pickEncouragement } from "@/lib/encouragements";
 import { isTodoDueToday } from "@/lib/dates";
-import { hapticComplete } from "@/lib/haptics";
+import { hapticComplete, hapticSelection } from "@/lib/haptics";
 import {
   allEssentialsDoneToday,
   completePermanentTodo,
@@ -89,6 +90,7 @@ export default function TodoApp() {
     emoji: string;
   } | null>(null);
   const [allDoneCompliment, setAllDoneCompliment] = useState<string | null>(null);
+  const [addedPrompt, setAddedPrompt] = useState(false);
   const lastToggleRef = useRef<{
     id: string;
     expectedCompleted: boolean;
@@ -267,6 +269,7 @@ export default function TodoApp() {
 
   const dismissCelebration = useCallback(() => setCelebration(null), []);
   const dismissCompletionFlash = useCallback(() => setCompletionFlash(null), []);
+  const dismissAddedPrompt = useCallback(() => setAddedPrompt(false), []);
 
   function celebrate(wasAllDoneForToday: boolean) {
     const picked = wasAllDoneForToday ? allDoneEncouragement() : pickEncouragement();
@@ -311,6 +314,8 @@ export default function TodoApp() {
     setInput("");
     setDueDate("");
     setReminderTime(null);
+    hapticSelection();
+    setAddedPrompt(true);
   }
 
   function toggleTodo(id: string) {
@@ -502,6 +507,12 @@ export default function TodoApp() {
             onReminderTimeChange={setReminderTime}
             onSubmit={addTodo}
           />
+
+          {addedPrompt && (
+            <div className="pointer-events-none flex justify-center pt-2">
+              <AddedPrompt onDone={dismissAddedPrompt} />
+            </div>
+          )}
 
           <div className="my-4 border-t border-accent-soft/40 sm:my-5" />
 
