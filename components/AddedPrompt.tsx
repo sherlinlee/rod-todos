@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { getSiteConfig } from "@/lib/site";
 
-const PROMPT_MS = 900;
+const PROMPT_MS = 1_200;
 
 type AddedPromptProps = {
   onDone: () => void;
@@ -19,14 +19,14 @@ export default function AddedPrompt({ onDone }: AddedPromptProps) {
 
   return (
     <div
-      className="animate-completion-flash flex w-full max-w-xs items-center justify-center gap-2 rounded-full border border-accent-soft/50 bg-card/95 px-4 py-2.5 shadow-[0_8px_28px_var(--shadow)] backdrop-blur-sm"
+      className="animate-added-prompt flex w-full max-w-xs items-center justify-center gap-2 rounded-full border border-accent/40 bg-accent/15 px-4 py-2.5 shadow-[0_8px_28px_var(--shadow)] backdrop-blur-sm"
       role="status"
       aria-live="polite"
     >
       <span className="animate-check-pop text-lg leading-none" aria-hidden>
         {site.navTodoEmoji}
       </span>
-      <p className="text-sm font-bold text-foreground">added!</p>
+      <p className="text-sm font-bold text-accent">added!</p>
     </div>
   );
 }

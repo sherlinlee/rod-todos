@@ -608,6 +608,29 @@ body.is-dragging .animate-pop-in {
   animation: completion-flash 0.9s ease-out forwards;
 }
 
+@keyframes added-prompt {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.94);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0) scale(1.03);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(2px) scale(0.98);
+  }
+}
+
+.animate-added-prompt {
+  animation: added-prompt 1.2s ease-out forwards;
+}
+
 .animate-strike-sweep {
   animation: strike-sweep 0.28s ease-out forwards;
   text-decoration: line-through;

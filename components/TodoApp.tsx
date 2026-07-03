@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import AddTodoForm from "@/components/AddTodoForm";
-import AddedPrompt from "@/components/AddedPrompt";
 import CelebrationToast from "@/components/CelebrationToast";
 import CompletionFlash from "@/components/CompletionFlash";
 import ConfettiBurst from "@/components/ConfettiBurst";
@@ -91,6 +90,7 @@ export default function TodoApp() {
   } | null>(null);
   const [allDoneCompliment, setAllDoneCompliment] = useState<string | null>(null);
   const [addedPrompt, setAddedPrompt] = useState(false);
+  const [addedPromptKey, setAddedPromptKey] = useState(0);
   const lastToggleRef = useRef<{
     id: string;
     expectedCompleted: boolean;
@@ -315,6 +315,7 @@ export default function TodoApp() {
     setDueDate("");
     setReminderTime(null);
     hapticSelection();
+    setAddedPromptKey((key) => key + 1);
     setAddedPrompt(true);
   }
 
@@ -505,14 +506,11 @@ export default function TodoApp() {
             onCategoryChange={setCategory}
             onDueDateChange={setDueDate}
             onReminderTimeChange={setReminderTime}
+            showAddedPrompt={addedPrompt}
+            addedPromptKey={addedPromptKey}
+            onAddedPromptDone={dismissAddedPrompt}
             onSubmit={addTodo}
           />
-
-          {addedPrompt && (
-            <div className="pointer-events-none flex justify-center pt-2">
-              <AddedPrompt onDone={dismissAddedPrompt} />
-            </div>
-          )}
 
           <div className="my-4 border-t border-accent-soft/40 sm:my-5" />
 

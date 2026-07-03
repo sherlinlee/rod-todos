@@ -5,6 +5,7 @@ import { getCategories } from "@/lib/categories";
 import ReminderTimePicker, {
   type ReminderTimePickerHandle,
 } from "@/components/ReminderTimePicker";
+import AddedPrompt from "@/components/AddedPrompt";
 import { todayString } from "@/lib/dates";
 import type { Category } from "@/lib/types";
 
@@ -13,6 +14,9 @@ type AddTodoFormProps = {
   category: Category;
   dueDate: string;
   reminderTime: string | null;
+  showAddedPrompt?: boolean;
+  addedPromptKey?: number;
+  onAddedPromptDone?: () => void;
   onInputChange: (value: string) => void;
   onCategoryChange: (value: Category) => void;
   onDueDateChange: (value: string) => void;
@@ -28,6 +32,9 @@ export default function AddTodoForm({
   category,
   dueDate,
   reminderTime,
+  showAddedPrompt = false,
+  addedPromptKey = 0,
+  onAddedPromptDone,
   onInputChange,
   onCategoryChange,
   onDueDateChange,
@@ -62,6 +69,12 @@ export default function AddTodoForm({
           Add
         </button>
       </div>
+
+      {showAddedPrompt && onAddedPromptDone && (
+        <div className="pointer-events-none flex justify-center">
+          <AddedPrompt key={addedPromptKey} onDone={onAddedPromptDone} />
+        </div>
+      )}
 
       <label className="flex items-center gap-2 rounded-xl bg-lavender/25 px-3 py-2 text-xs font-semibold text-foreground/65 dark:bg-accent-soft/25 dark:text-foreground/75">
         <span className="shrink-0">📅 Due</span>
