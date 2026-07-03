@@ -94,7 +94,7 @@ export default function TodoApp() {
     expectedCompleted: boolean;
     at: number;
   } | null>(null);
-  const lastEditRef = useRef<{ at: number } | null>(null);
+  const lastEditRef = useRef<{ at: number; todoId: string } | null>(null);
   const todosRef = useRef<Todo[]>([]);
 
   function persistTodos(next: Todo[], syncNow = false) {
@@ -165,7 +165,8 @@ export default function TodoApp() {
       }
 
       const lastEdit = lastEditRef.current;
-      if (lastEdit != null && Date.now() - lastEdit.at < 5000) {
+      if (lastEdit != null && Date.now() - lastEdit.at < 15_000) {
+        writeLocalTodos(todosRef.current);
         return;
       }
 
@@ -193,6 +194,9 @@ export default function TodoApp() {
 
   useEffect(() => {
     if (!hydrated) return;
+    if (lastEditRef.current && Date.now() - lastEditRef.current.at < 15_000) {
+      return;
+    }
     const handle = window.setTimeout(() => {
       writeLocalTodos(todos);
       scheduleCloudPush(() => ({
@@ -384,7 +388,7 @@ export default function TodoApp() {
     const reminderChanged = updates.reminderTime !== (target.reminderTime ?? null);
     const dueDateChanged = updates.dueDate !== target.dueDate;
     const now = Date.now();
-    lastEditRef.current = { at: now };
+    lastEditRef.current = { at: now, todoId: id };
 
     const next = todosRef.current.map((t) =>
       t.id === id

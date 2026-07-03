@@ -26,6 +26,9 @@ import {
 
 export const WHEEL_ITEM_HEIGHT = 32;
 const WHEEL_VISIBLE_ROWS = 5;
+const WHEEL_PAD_ROWS = Math.floor(WHEEL_VISIBLE_ROWS / 2);
+/** Distance from the viewport top to the selection band center. */
+const WHEEL_SELECTION_CENTER = WHEEL_PAD_ROWS * WHEEL_ITEM_HEIGHT;
 const WHEEL_LOOP_REPEATS = 41;
 const SETTLE_DEBOUNCE_MS = 140;
 
@@ -72,25 +75,55 @@ function WheelColumn<T extends string | number>({
 
   const centerRepeat = Math.floor(WHEEL_LOOP_REPEATS / 2);
 
-  const scrollToIndex = useCallback((index: number, smooth: boolean) => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const top = index * WHEEL_ITEM_HEIGHT;
-    if (smooth) {
-      el.scrollTo({ top, behavior: "smooth" });
-      return;
-    }
-    el.scrollTop = top;
-  }, []);
-
-  const indexForValue = useCallback(
-    (target: T, repeat = loop ? centerRepeat : 0) => {
+  const contentIndexForValue = useCallback(
+    (target: T) => {
       const idx = items.indexOf(target);
       const base = idx >= 0 ? idx : 0;
-      return loop ? repeat * items.length + base : base;
+      if (loop) {
+        return centerRepeat * items.length + base;
+      }
+      return WHEEL_PAD_ROWS + base;
     },
     [centerRepeat, items, loop],
+  );
+
+  const scrollTopForContentIndex = useCallback((contentIndex: number) => {
+    return contentIndex * WHEEL_ITEM_HEIGHT - WHEEL_SELECTION_CENTER;
+  }, []);
+
+  const scrollToValue = useCallback(
+    (target: T, smooth: boolean) => {
+      const el = scrollRef.current;
+      if (!el) return;
+
+      const top = scrollTopForContentIndex(contentIndexForValue(target));
+      if (smooth) {
+        el.scrollTo({ top, behavior: "smooth" });
+        return;
+      }
+      el.scrollTop = top;
+    },
+    [contentIndexForValue, scrollTopForContentIndex],
+  );
+
+  const itemIndexAtSelectionCenter = useCallback(
+    (scrollTop: number) => {
+      const contentIndex = Math.round(
+        (scrollTop + WHEEL_SELECTION_CENTER) / WHEEL_ITEM_HEIGHT,
+      );
+
+      if (loop) {
+        return (
+          ((contentIndex % items.length) + items.length) % items.length
+        );
+      }
+
+      return Math.min(
+        Math.max(contentIndex - WHEEL_PAD_ROWS, 0),
+        items.length - 1,
+      );
+    },
+    [items.length, loop],
   );
 
   const readValueFromScroll = useCallback((): T => {
@@ -99,22 +132,28 @@ function WheelColumn<T extends string | number>({
       return lastEmitted.current;
     }
 
-    const rawIndex = Math.round(el.scrollTop / WHEEL_ITEM_HEIGHT);
-    const itemIndex = loop
-      ? ((rawIndex % items.length) + items.length) % items.length
-      : Math.min(Math.max(rawIndex, 0), items.length - 1);
-
+    const itemIndex = itemIndexAtSelectionCenter(el.scrollTop);
     return items[itemIndex] ?? lastEmitted.current;
-  }, [items, loop]);
+  }, [itemIndexAtSelectionCenter, items]);
 
   const commitValue = useCallback(
     (nextValue: T, emit: boolean) => {
       const el = scrollRef.current;
-      const centeredIndex = loop ? indexForValue(nextValue) : items.indexOf(nextValue);
-      const targetTop = centeredIndex * WHEEL_ITEM_HEIGHT;
+      const contentIndex = contentIndexForValue(nextValue);
+      const targetTop = scrollTopForContentIndex(contentIndex);
 
       if (el && Math.abs(el.scrollTop - targetTop) > 1) {
         el.scrollTop = targetTop;
+      }
+
+      if (loop && el) {
+        const rawContentIndex = Math.round(
+          (el.scrollTop + WHEEL_SELECTION_CENTER) / WHEEL_ITEM_HEIGHT,
+        );
+        const repeatIndex = Math.floor(rawContentIndex / items.length);
+        if (repeatIndex < 4 || repeatIndex > WHEEL_LOOP_REPEATS - 5) {
+          el.scrollTop = targetTop;
+        }
       }
 
       const itemIndex = items.indexOf(nextValue);
@@ -135,7 +174,7 @@ function WheelColumn<T extends string | number>({
 
       return nextValue;
     },
-    [indexForValue, items, loop],
+    [contentIndexForValue, items, loop, scrollTopForContentIndex],
   );
 
   const settleScroll = useCallback(() => {
@@ -156,7 +195,7 @@ function WheelColumn<T extends string | number>({
       scrollEndTimer.current = null;
     }
     const nextValue = readValueFromScroll();
-    return commitValue(nextValue, true);
+    return commitValue(nextValue, false);
   }, [commitValue, readValueFromScroll]);
 
   useLayoutEffect(() => {
@@ -169,8 +208,8 @@ function WheelColumn<T extends string | number>({
       return;
     }
 
-    scrollToIndex(indexForValue(value), false);
-  }, [indexForValue, items, scrollToIndex, value]);
+    scrollToValue(value, false);
+  }, [items, scrollToValue, value]);
 
   useEffect(() => {
     if (!registerCommit) return;
@@ -201,11 +240,7 @@ function WheelColumn<T extends string | number>({
 
     const el = scrollRef.current;
     if (el && items.length > 0) {
-      const rawIndex = Math.round(el.scrollTop / WHEEL_ITEM_HEIGHT);
-      const itemIndex = loop
-        ? ((rawIndex % items.length) + items.length) % items.length
-        : Math.min(Math.max(rawIndex, 0), items.length - 1);
-      setFocusedIndex(itemIndex);
+      setFocusedIndex(itemIndexAtSelectionCenter(el.scrollTop));
     }
 
     if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);
@@ -225,7 +260,7 @@ function WheelColumn<T extends string | number>({
     const nextValue = items[nextIndex];
     if (nextValue === undefined) return;
     commitValue(nextValue, true);
-    scrollToIndex(indexForValue(nextValue), true);
+    scrollToValue(nextValue, true);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -239,7 +274,6 @@ function WheelColumn<T extends string | number>({
     }
   }
 
-  const padRows = Math.floor(WHEEL_VISIBLE_ROWS / 2);
   const scrollHeight = WHEEL_ITEM_HEIGHT * WHEEL_VISIBLE_ROWS;
 
   return (
@@ -257,7 +291,10 @@ function WheelColumn<T extends string | number>({
         style={{ height: scrollHeight }}
       >
         {!loop && (
-          <div aria-hidden style={{ height: padRows * WHEEL_ITEM_HEIGHT }} />
+          <div
+            aria-hidden
+            style={{ height: WHEEL_PAD_ROWS * WHEEL_ITEM_HEIGHT }}
+          />
         )}
         {extendedItems.map((item, index) => {
           const itemIndex = loop ? index % items.length : index;
@@ -279,7 +316,10 @@ function WheelColumn<T extends string | number>({
           );
         })}
         {!loop && (
-          <div aria-hidden style={{ height: padRows * WHEEL_ITEM_HEIGHT }} />
+          <div
+            aria-hidden
+            style={{ height: WHEEL_PAD_ROWS * WHEEL_ITEM_HEIGHT }}
+          />
         )}
       </div>
     </div>
