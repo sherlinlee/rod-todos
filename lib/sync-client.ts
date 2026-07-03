@@ -207,13 +207,9 @@ async function pushCloudSyncMerged(local: RodSyncData): Promise<boolean> {
       hasUserTodos(cloud) &&
       !hasUserTodos(localWithRevision)
     ) {
-      const recovered = {
-        ...merged,
-        todos: ensureEssentials(migrateTodos(cloud.todos)),
-      };
-      applyCloudData(recovered);
-      if (!needsCloudPush(recovered, cloud)) return true;
-      const payload = { ...recovered, updatedAt: Date.now() };
+      applyCloudData(merged);
+      if (!needsCloudPush(merged, cloud)) return true;
+      const payload = { ...merged, updatedAt: Date.now() };
       return pushCloudSync(payload);
     }
 

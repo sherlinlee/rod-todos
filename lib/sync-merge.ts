@@ -41,6 +41,16 @@ function isRemoved(
   return deletedAt !== undefined && deletedAt >= updatedAt;
 }
 
+function filterTombstonedTodos(
+  todos: Todo[],
+  tombstones: Map<string, number>,
+): Todo[] {
+  return todos.filter(
+    (todo) =>
+      !isRemoved(`todo:${todo.id}`, todoUpdatedAt(todo), tombstones),
+  );
+}
+
 function mergeById<T extends { id: string }>(
   local: T[],
   cloud: T[],
@@ -187,12 +197,22 @@ export function mergeSyncData(
   const cloudUserTodoCount = userTodoTimestamps(cloud.todos).length;
   const mergedUserTodoCount = userTodoTimestamps(todos).length;
 
+  const recoverableCloudTodos = filterTombstonedTodos(
+    cloud.todos,
+    tombstoneLookup,
+  );
+  const hasRecoverableCloudTodos = hasUserTodos({
+    ...cloud,
+    todos: recoverableCloudTodos,
+  });
+
   if (
-    (!hasUserTodos({ ...local, todos: local.todos }) && hasUserTodos(cloud)) ||
-    (cloudUserTodoCount > mergedUserTodoCount &&
-      cloudUserTodoCount >= localUserTodoCount)
+    hasRecoverableCloudTodos &&
+    ((!hasUserTodos({ ...local, todos: local.todos }) && hasUserTodos(cloud)) ||
+      (cloudUserTodoCount > mergedUserTodoCount &&
+        cloudUserTodoCount >= localUserTodoCount))
   ) {
-    todos = ensureEssentials(migrateTodos(cloud.todos));
+    todos = ensureEssentials(migrateTodos(recoverableCloudTodos));
   }
 
   const ideas = mergeById(

@@ -39,9 +39,11 @@ import {
   readLocalIdeas,
   readLocalJournal,
   readLocalTombstones,
+  recordTombstone,
   refreshFromCloud,
   pushSyncNow,
   scheduleCloudPush,
+  todoTombstoneKey,
   touchSyncMeta,
   writeLocalIdeas,
   writeLocalJournal,
@@ -389,9 +391,16 @@ export default function TodoApp() {
   }
 
   function deleteTodo(id: string) {
-    setTodos((prev) =>
-      prev.filter((t) => t.id !== id || isPermanentTodo(t)),
+    const target = todosRef.current.find((t) => t.id === id);
+    if (!target || isPermanentTodo(target)) return;
+
+    recordTombstone(todoTombstoneKey(id));
+
+    const next = todosRef.current.filter(
+      (t) => t.id !== id || isPermanentTodo(t),
     );
+    setTodos(next);
+    persistTodos(next, true);
   }
 
   function updateTodo(id: string, updates: TodoUpdates) {
