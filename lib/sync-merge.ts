@@ -55,6 +55,26 @@ function filterTombstonedTodos(
   );
 }
 
+function isLegacyJournalEntry(entry: JournalEntry): boolean {
+  return (
+    entry.id === `legacy-${entry.date}` ||
+    entry.id.startsWith(`legacy-${entry.date}-`)
+  );
+}
+
+function isJournalEntryRemoved(
+  entry: JournalEntry,
+  tombstones: Map<string, number>,
+): boolean {
+  const entryKey = `${JOURNAL_ENTRY_TOMBSTONE_PREFIX}${entry.id}`;
+  if (isRemoved(entryKey, entry.updatedAt, tombstones)) return true;
+
+  if (!isLegacyJournalEntry(entry)) return false;
+
+  const legacyDateKey = `${JOURNAL_DATE_TOMBSTONE_PREFIX}${entry.date}`;
+  return isRemoved(legacyDateKey, entry.updatedAt, tombstones);
+}
+
 function mergeById<T extends { id: string }>(
   local: T[],
   cloud: T[],
@@ -103,24 +123,14 @@ function mergeJournal(
   const map = new Map<string, JournalEntry>();
 
   for (const entry of localNormalized) {
-    const entryKey = `${JOURNAL_ENTRY_TOMBSTONE_PREFIX}${entry.id}`;
-    const legacyDateKey = `${JOURNAL_DATE_TOMBSTONE_PREFIX}${entry.date}`;
-    if (
-      isRemoved(entryKey, entry.updatedAt, tombstones) ||
-      isRemoved(legacyDateKey, entry.updatedAt, tombstones)
-    ) {
+    if (isJournalEntryRemoved(entry, tombstones)) {
       continue;
     }
     map.set(entry.id, entry);
   }
 
   for (const entry of cloudNormalized) {
-    const entryKey = `${JOURNAL_ENTRY_TOMBSTONE_PREFIX}${entry.id}`;
-    const legacyDateKey = `${JOURNAL_DATE_TOMBSTONE_PREFIX}${entry.date}`;
-    if (
-      isRemoved(entryKey, entry.updatedAt, tombstones) ||
-      isRemoved(legacyDateKey, entry.updatedAt, tombstones)
-    ) {
+    if (isJournalEntryRemoved(entry, tombstones)) {
       continue;
     }
 

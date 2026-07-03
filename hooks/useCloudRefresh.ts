@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { flushPendingCloudPush, refreshFromCloud } from "@/lib/sync-client";
 
 const POLL_INTERVAL_MS = 8_000;
@@ -8,10 +8,42 @@ const POLL_INTERVAL_MS = 8_000;
 export function useCloudRefresh(
   onRefresh: (data: Awaited<ReturnType<typeof refreshFromCloud>>) => void,
 ) {
+  const onRefreshRef = useRef(onRefresh);
+
   useEffect(() => {
-    function handleRefresh() {
+    onRefreshRef.current = onRefresh;
+  }, [onRefresh]);
+
+  useEffect(() => {
+    let disposed = false;
+    let inFlight = false;
+    let pending = false;
+
+    async function runRefresh() {
       if (document.visibilityState !== "visible") return;
-      void refreshFromCloud().then(onRefresh);
+
+      if (inFlight) {
+        pending = true;
+        return;
+      }
+
+      inFlight = true;
+      try {
+        do {
+          pending = false;
+          const data = await refreshFromCloud();
+          if (disposed || document.visibilityState !== "visible") break;
+          onRefreshRef.current(data);
+        } while (pending);
+      } catch {
+        pending = false;
+      } finally {
+        inFlight = false;
+      }
+    }
+
+    function handleRefresh() {
+      void runRefresh();
     }
 
     function handleHidden() {
@@ -27,11 +59,12 @@ export function useCloudRefresh(
     const pollId = window.setInterval(handleRefresh, POLL_INTERVAL_MS);
 
     return () => {
+      disposed = true;
       window.removeEventListener("focus", handleRefresh);
       document.removeEventListener("visibilitychange", handleRefresh);
       document.removeEventListener("visibilitychange", handleHidden);
       window.removeEventListener("pagehide", flushPendingCloudPush);
       window.clearInterval(pollId);
     };
-  }, [onRefresh]);
+  }, []);
 }
