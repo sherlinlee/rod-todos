@@ -51,7 +51,7 @@ function parseBody(body: unknown): RodSyncData | null {
   if (!Array.isArray(raw.todos) || !Array.isArray(raw.ideas)) return null;
   if (typeof raw.updatedAt !== "number") return null;
 
-  const todos = raw.todos.filter(isValidTodo);
+  const todos = ensureEssentials(migrateTodos(raw.todos.filter(isValidTodo)));
   const ideas = raw.ideas.filter(isValidIdea);
   const journal = Array.isArray(raw.journal)
     ? normalizeJournalEntries(raw.journal.filter(isValidJournalEntry))

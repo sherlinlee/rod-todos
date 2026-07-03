@@ -122,10 +122,7 @@ function WheelColumn<T extends string | number>({
     setFocusedIndex(itemIndex);
 
     if (nextValue !== lastEmitted.current) {
-      lastEmitted.current = nextValue;
-      internalValueChange.current = true;
       hapticSelection();
-      onChange(nextValue);
     }
 
     requestAnimationFrame(() => {
@@ -174,7 +171,14 @@ function WheelColumn<T extends string | number>({
       const itemIndex = loop
         ? ((rawIndex % items.length) + items.length) % items.length
         : Math.min(Math.max(rawIndex, 0), items.length - 1);
+      const nextValue = items[itemIndex];
       setFocusedIndex(itemIndex);
+
+      if (nextValue !== undefined && nextValue !== lastEmitted.current) {
+        lastEmitted.current = nextValue;
+        internalValueChange.current = true;
+        onChange(nextValue);
+      }
     }
 
     if (scrollEndTimer.current) clearTimeout(scrollEndTimer.current);

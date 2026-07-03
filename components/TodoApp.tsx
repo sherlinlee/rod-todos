@@ -27,6 +27,7 @@ import {
   uncompletePermanentTodo,
 } from "@/lib/essentials";
 import { migrateTodos, reorderTodos, sortByDueDate } from "@/lib/migrate";
+import { mergeSyncData } from "@/lib/sync-merge";
 import {
   remainingTodayRegularCount,
   todayRegularTodos,
@@ -40,9 +41,11 @@ import {
   readLocalTombstones,
   refreshFromCloud,
   scheduleCloudPush,
+  touchSyncMeta,
   writeLocalIdeas,
   writeLocalJournal,
   writeLocalTodos,
+  buildLocalSnapshot,
 } from "@/lib/sync-client";
 import type {
   Category,
@@ -63,6 +66,11 @@ type Celebration = {
   emoji: string;
   seed: number;
 };
+
+function localTodosRevision(todos: Todo[]) {
+  if (todos.length === 0) return 0;
+  return Math.max(...todos.map((todo) => todo.updatedAt ?? todo.createdAt));
+}
 
 export default function TodoApp() {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -86,6 +94,19 @@ export default function TodoApp() {
     at: number;
   } | null>(null);
   const todosRef = useRef<Todo[]>([]);
+
+  function persistTodos(next: Todo[]) {
+    todosRef.current = next;
+    writeLocalTodos(next);
+    touchSyncMeta();
+    scheduleCloudPush(() => ({
+      todos: next,
+      ideas: readLocalIdeas(),
+      journal: readLocalJournal(),
+      tombstones: readLocalTombstones(),
+      updatedAt: Date.now(),
+    }));
+  }
 
   useEffect(() => {
     todosRef.current = todos;
@@ -136,7 +157,21 @@ export default function TodoApp() {
         return;
       }
 
-      setTodos(data.todos);
+      const localSnapshot = buildLocalSnapshot();
+      const merged = mergeSyncData(
+        {
+          ...localSnapshot,
+          todos: todosRef.current,
+          updatedAt: Math.max(
+            localSnapshot.updatedAt,
+            localTodosRevision(todosRef.current),
+          ),
+        },
+        data,
+      );
+
+      todosRef.current = merged.todos;
+      setTodos(merged.todos);
     },
     [],
   );
@@ -324,26 +359,28 @@ export default function TodoApp() {
   }
 
   function updateTodo(id: string, updates: TodoUpdates) {
-    const target = todos.find((t) => t.id === id);
+    const target = todosRef.current.find((t) => t.id === id);
     if (!target || isPermanentTodo(target)) return;
 
     const reminderChanged = updates.reminderTime !== (target.reminderTime ?? null);
     const dueDateChanged = updates.dueDate !== target.dueDate;
+    const now = Date.now();
 
-    setTodos((prev) =>
-      prev.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              ...updates,
-              updatedAt: Date.now(),
-              ...(reminderChanged || dueDateChanged
-                ? { lastRemindedDate: null }
-                : {}),
-            }
-          : t,
-      ),
+    const next = todosRef.current.map((t) =>
+      t.id === id
+        ? {
+            ...t,
+            ...updates,
+            updatedAt: now,
+            ...(reminderChanged || dueDateChanged
+              ? { lastRemindedDate: null }
+              : {}),
+          }
+        : t,
     );
+
+    setTodos(next);
+    persistTodos(next);
   }
 
   function clearCompleted() {
